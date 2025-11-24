@@ -8,6 +8,8 @@ from src.topologies import (
     FullyConnectedTopology,
     ErdosRenyiTopology,
     SmallWorldTopology,
+    StarTopology,
+    GridTopology
 )
 
 
@@ -28,16 +30,22 @@ class TopologyFactory:
         if name in ("ring", "cycle"):
             return RingTopology(num_nodes, shuffle_nodes=shuffle_nodes)
 
-        if name in ("full", "fully_connected", "clique"):
+        elif name in ("full", "fully_connected", "clique"):
             return FullyConnectedTopology(num_nodes, shuffle_nodes=shuffle_nodes)
 
-        if name in ("er", "erdos_renyi"):
+        elif name in ("er", "erdos_renyi"):
             p = kwargs.get("p", 0.2)
             return ErdosRenyiTopology(num_nodes, p=p, shuffle_nodes=shuffle_nodes)
 
-        if name in ("small_world", "ws"):
+        elif name in ("small_world", "ws"):
             k = kwargs.get("k", 4)
             p = kwargs.get("p", 0.1)
             return SmallWorldTopology(num_nodes, k=k, p=p, shuffle_nodes=shuffle_nodes)
-
-        raise ValueError(f"Unknown topology: {name}")
+        
+        elif name in ("star", "hub"):
+            return StarTopology(num_nodes, shuffle_nodes=shuffle_nodes)
+        
+        elif name in ("grid", "mesh", "lattice"):
+            return GridTopology(num_nodes, shuffle_nodes=shuffle_nodes)
+        else:
+            raise ValueError(f"Unknown topology: {name}")

@@ -11,13 +11,13 @@ def set_global_seed(seed: int = 42):
     # torch.backends.cudnn.benchmark = False
 
 def get_torch_device() -> str:
-    return "mps" if torch.backends.mps.is_available() else "cpu"
-    # if torch.cuda.is_available():
-    #     return "cuda:0"
-    # elif torch.backends.mps.is_available():
-    #     return "mps"
-    # else:
-    #     return "cpu"
+    # return "mps" if torch.backends.mps.is_available() else "cpu"
+    if torch.cuda.is_available():
+        return "cuda:0"
+    elif torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
 
 def evaluate(model, dataloader, device="cpu"):
     """Evaluate a model on a given dataloader and return accuracy in [0, 1]."""

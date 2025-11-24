@@ -1,7 +1,9 @@
 # models_factory.py
 
+from .mnist_logreg import MnistLogReg
 from .mnist_cnn import MnistCNN
 from .cifar10_cnn import Cifar10CNN
+from .cifar10_logreg import Cifar10LogReg
 
 class ModelFactory:
     @staticmethod
@@ -42,12 +44,20 @@ class ModelFactory:
                 "Add the appropriate ResNet class and wiring in ModelFactory.create()."
             )
 
-        # --- Logistic Regression (to be implemented later) ---
+        # --- Logistic Regression  ---
         if mt in ("logreg", "logistic", "logistic_regression"):
-            raise ValueError(
-                f"Logistic regression models not implemented yet for dataset '{dataset_name}'. "
-                "Add the appropriate classifier and wiring in ModelFactory.create()."
-            )
+            if ds == "mnist":
+                def model_fn():
+                    return MnistLogReg(in_channels=1, num_classes=10)
+                return model_fn
+            
+            elif ds in ("cifar10", "cifar"):
+                def model_fn():
+                    return Cifar10LogReg(in_channels=3, num_classes=10)
+                return model_fn
+            
+            else:
+                raise ValueError(f"Logistic regression not implemented for dataset '{dataset_name}'")
 
         # Unknown model type
         raise ValueError(f"Unknown model type: {model_name}")

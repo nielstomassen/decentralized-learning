@@ -2,29 +2,30 @@ import copy
 import torch
 
 class Node:
-    def __init__(self, node_id, model_fn, dataloader, neighbors, learning_settings, global_init):
+    def __init__(self, node_id, model_fn, dataloader, neighbors, settings, global_init):
         self.id = node_id
-        self.model = model_fn()              # fresh model instance
+        self.model = model_fn().to(settings.torch_device_name)             # fresh model instance
         self.dataloader = dataloader
         self.neighbors = neighbors           # list of neighbor node_ids
         self.optimizer = self.optimizer = torch.optim.SGD(
             self.model.parameters(),
-            lr=learning_settings.learning_rate,
-            momentum=learning_settings.momentum,
-            weight_decay=learning_settings.weight_decay,
+            lr=settings.learning.learning_rate,
+            momentum=settings.learning.momentum,
+            weight_decay=settings.learning.weight_decay,
         )
         self._buffer_neighbor_models = []    # for storing received models
         self.model.load_state_dict(global_init)
 
     # num_steps = number of gradient steps the node takes this round
-    def local_train(self, num_steps=1, device="cpu"):
-        # Put model parameters on device and in training mode
-        self.model.to(device)
+    def local_train(self, local_epochs=1, device="cpu"):
+        # Put model in training mode
         self.model.train()
         # Iterator over dataloader (so we can call next())
         data_iter = iter(self.dataloader)
 
-        for _ in range(num_steps):
+        num_batches = len(self.dataloader)
+        total_steps = local_epochs * num_batches
+        for _ in range(total_steps):
             try:
                 x, y = next(data_iter)
             # If dataloader is exhausted

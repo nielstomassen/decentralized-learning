@@ -13,7 +13,7 @@ class LearningSettings:
     momentum: float
     weight_decay: float
     batch_size: int
-    local_steps: int
+    local_epochs: int
 
 
 @dataclass_json
@@ -28,9 +28,12 @@ class SessionSettings:
     topology: str
     participants: int
     rounds: int
-    seed: int   
-    validation_batch_size: int = 256
-    torch_device_name: str = "cpu"
+    seed: int
+    enable_evaluation: bool 
+    eval_interval: int  
+    validation_batch_size: int
+    time_rounds: bool
+    torch_device_name: str 
 
     # algorithm: str
     # alpha: float = 1
