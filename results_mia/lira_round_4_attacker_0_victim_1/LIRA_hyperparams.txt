@@ -1,0 +1,9 @@
+perc: 0.05
+perc_test: 0.01
+measurement_number: 100
+num_shadow_models: 5
+lr_shadow_model: 0.001
+epochs_shadow_model: 10
+train_accuracy: 90.33333333333333
+test_accuracy: 86.95
+device: cuda:0

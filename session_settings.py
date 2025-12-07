@@ -41,3 +41,12 @@ class SessionSettings:
     # compute_validation_loss_global_model: bool = False    
     # partitioner: str = "iid"  # iid, shards or dirichlet
     # log_level: str = "INFO"
+
+@dataclass
+class MIASettings:
+    attack_type: str = "none"    # "none" | "baseline" | "lira"
+    interval: int = 1            # run every k rounds
+    attacker_id: int = 0
+    victim_id: int = 1
+    measurement_number: int = 100
+    results_root: str = "results_mia"

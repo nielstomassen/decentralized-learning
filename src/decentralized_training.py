@@ -1,5 +1,7 @@
 from .node import Node
 from .utils import evaluate
+from mia_attacks import main_baseline
+import os
 
 def create_nodes(settings, dataloaders, topology, model_fn):
     # shared init
@@ -27,19 +29,26 @@ def local_training_phase(nodes, learning_settings, device: str) -> None:
             device=device,
         )
 
-def communication_phase(nodes):
-    """Prepare and deliver messages between nodes."""
-    messages = {node.id: node.prepare_message() for node in nodes}
+def communication_phase(nodes, messages=None):
+    """
+    Prepare and deliver messages between nodes.
+
+    If `messages` is None, we call `prepare_message()` on each node.
+    """
+    if messages is None:
+        messages = {node.id: node.prepare_message() for node in nodes}
 
     for node in nodes:
         for nb in node.neighbors:
             node.receive_message(messages[nb])
 
+    return messages
+
 def averaging_phase(nodes):
     for node in nodes:
         node.average_with_neighbors()
 
-def run_round(round_nr: int, nodes, settings, test_loader, device: str):
+def run_round(round_nr: int, nodes, settings, test_loader, device: str, dataloaders, model_fn, mia_runner=None,):
     print(f"Round {round_nr + 1}")
 
     # 1) Local training
@@ -52,6 +61,18 @@ def run_round(round_nr: int, nodes, settings, test_loader, device: str):
 
     if(do_eval):
         acc_before = evaluate(nodes[0].model, test_loader, device=device)
+
+    # 2) (Optional) run MIA before communication/averaging, but only every k rounds
+    # 3) Optional: run MIA on messages before communication/averaging
+    if mia_runner is not None:
+        mia_runner.maybe_run(
+            round_nr=round_nr,
+            nodes=nodes,
+            dataloaders=dataloaders,
+            test_loader=test_loader,
+            model_fn=model_fn,
+            device=device,
+        )
 
     # 3) Communication
     communication_phase(nodes)

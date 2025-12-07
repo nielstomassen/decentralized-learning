@@ -29,6 +29,18 @@ def get_args():
     # parser.add_argument('--validation-set-fraction', type=float, default=0.0)
     # parser.add_argument('--compute-validation-loss-global-model', action=argparse.BooleanOptionalAction)
 
+    parser.add_argument(
+        "--mia-attack",
+        type=str,
+        default="none",
+        choices=["none", "baseline", "lira"],
+        help="Type of MIA attack to run each interval."
+    )
+    parser.add_argument("--mia-interval", type=int, default=1)
+    parser.add_argument("--mia-attacker", type=int, default=0)
+    parser.add_argument("--mia-victim", type=int, default=1)
+    parser.add_argument("--mia-measurement_number", type=int, default=100)
+
     args = parser.parse_args()
     # if args.dataset == "mnist":
     #     args.learning_rate = 0.004

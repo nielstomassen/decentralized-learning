@@ -1,0 +1,9 @@
+# core dependencies
+torch
+torchvision
+numpy
+matplotlib
+scipy
+scikit-learn
+
+mia_attacks @ git+https://github.com/nielstomassen/mia_attacks.git

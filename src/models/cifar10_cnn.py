@@ -44,8 +44,12 @@ class Cifar10CNN(nn.Module):
         self.fc1 = nn.Linear(128 * 4 * 4, 256)
         self.fc2 = nn.Linear(256, num_classes)
 
-    def forward(self, x):
-        # x: (batch, in_channels, 32, 32)
+    def feature(self, x):
+        """
+        Return the convolutional feature representation before the FC layers.
+        Shape in:  (batch, in_channels, 32, 32)
+        Shape out: (batch, 128 * 4 * 4)
+        """
         x = self.conv1(x)
         x = F.relu(x)
         x = self.pool(x)      # (batch, 32, 16, 16)
@@ -58,7 +62,13 @@ class Cifar10CNN(nn.Module):
         x = F.relu(x)
         x = self.pool(x)      # (batch, 128, 4, 4)
 
-        x = x.view(x.size(0), -1)  # flatten: (batch, 128*4*4)
+        # Flatten for fully-connected layers
+        x = x.view(x.size(0), -1)  # (batch, 128*4*4)
+        return x
+
+    def forward(self, x):
+        # Use the shared feature extractor
+        x = self.feature(x)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)            # logits (batch, num_classes)

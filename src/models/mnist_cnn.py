@@ -32,8 +32,12 @@ class MnistCNN(nn.Module):
         self.fc1 = nn.Linear(64 * 7 * 7, 128)
         self.fc2 = nn.Linear(128, num_classes)
 
-    def forward(self, x):
-        # x: (batch, in_channels, 28, 28)
+    def feature(self, x):
+        """
+        Return the convolutional feature embedding before the FC layers.
+        Shape in:  (batch, in_channels, 28, 28)
+        Shape out: (batch, 64 * 7 * 7)
+        """
         x = self.conv1(x)
         x = F.relu(x)
         x = self.pool(x)     # (batch, 32, 14, 14)
@@ -42,8 +46,13 @@ class MnistCNN(nn.Module):
         x = F.relu(x)
         x = self.pool(x)     # (batch, 64, 7, 7)
 
-        x = x.view(x.size(0), -1)  # flatten
+        x = x.view(x.size(0), -1)  # flatten to (batch, 64*7*7)
+        return x
+
+    def forward(self, x):
+        # Use shared feature extractor
+        x = self.feature(x)
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.fc2(x)            # logits (batch, num_classes)
+        x = self.fc2(x)      # logits (batch, num_classes)
         return x

@@ -1,4 +1,5 @@
 import torch
+from src.mia_runner import MIARunner
 from src.topologies.topology_factory import TopologyFactory
 from src.data_utils.dataset_factory import DatasetFactory
 from src.models.model_factory import ModelFactory
@@ -6,7 +7,8 @@ from src.utils import set_global_seed, get_torch_device
 from src.decentralized_training import create_nodes, run_round
 import time
 from args import get_args
-from session_settings import SessionSettings, LearningSettings
+from session_settings import MIASettings, SessionSettings, LearningSettings
+import mia_attacks
 
 def build_settings():
     args = get_args()
@@ -31,10 +33,19 @@ def build_settings():
         time_rounds=args.time_rounds,
         torch_device_name=get_torch_device(),
     )
-    return settings, learning_settings
+    mia_settings = MIASettings(
+        attack_type=args.mia_attack,   
+        interval=args.mia_interval,    
+        attacker_id=args.mia_attacker, 
+        victim_id=args.mia_victim,     
+        measurement_number=args.mia_measurement_number,
+        results_root="results_mia",
+    )
+    return settings, learning_settings, mia_settings
 
 def run():
-    settings, learning_settings = build_settings()
+    settings, learning_settings, mia_settings = build_settings()
+    mia_runner = MIARunner(mia_settings) if mia_settings.attack_type != "none" else None
     set_global_seed(settings.seed)
 
     # 1. Load dataset
@@ -68,6 +79,9 @@ def run():
             settings=settings,
             test_loader=test_loader,
             device=settings.torch_device_name,
+            dataloaders=dataloaders,
+            model_fn=model_fn,
+            mia_runner=mia_runner
         )
         if(settings.time_rounds):
             # Make sure all GPU work is finished before stopping the timer
