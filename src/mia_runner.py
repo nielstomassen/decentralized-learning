@@ -95,7 +95,7 @@ class MIARunner:
             train_loader=victim_train_loader,
             test_loader=test_loader,
             device=device,
-            choice="loss",  # or expose via config if you like
+            choice=self.config.mia_baseline_type,  
             measurement_number=self.config.measurement_number,
             results_dir=results_dir,
             save_artifacts=True,

@@ -4,6 +4,6 @@ measurement_number: 100
 num_shadow_models: 5
 lr_shadow_model: 0.001
 epochs_shadow_model: 10
-train_accuracy: 95.33333333333333
-test_accuracy: 90.91
+train_accuracy: 98.63333333333334
+test_accuracy: 96.93
 device: cuda:0

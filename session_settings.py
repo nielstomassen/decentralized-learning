@@ -50,3 +50,10 @@ class MIASettings:
     victim_id: int = 1
     measurement_number: int = 100
     results_root: str = "results_mia"
+    mia_baseline_type: str = "loss"
+    lira_known_member_perc: float = 0.05
+    lira_known_nonmember_perc: float = 0.1
+    lira_num_shadow_models: int = 5
+    lira_shadow_model_lr: float = 1e-3
+    lira_shadow_model_epochs: int = 5
+

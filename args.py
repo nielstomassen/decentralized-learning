@@ -36,10 +36,19 @@ def get_args():
         choices=["none", "baseline", "lira"],
         help="Type of MIA attack to run each interval."
     )
-    parser.add_argument("--mia-interval", type=int, default=1)
-    parser.add_argument("--mia-attacker", type=int, default=0)
-    parser.add_argument("--mia-victim", type=int, default=1)
-    parser.add_argument("--mia-measurement_number", type=int, default=100)
+    parser.add_argument("--results-root", type=str, default="results_mia", help="Location to store mia results (config + auc plots).")
+    parser.add_argument("--mia-interval", type=int, default=1, help="Round interval to run mia attack.")
+    parser.add_argument("--mia-attacker", type=int, default=0, help="Node id of attacker")
+    parser.add_argument("--mia-victim", type=int, default=1, help="Node id of victim")
+    parser.add_argument("--mia-measurement-number", type=int, default=100, help="Number of member samples used for MIA evaluation (same number of non-members is used). Total measurement set size = 2 * measurement number.")
+    parser.add_argument("--mia-baseline-type", type=str, default="loss", choices=["conf", "loss", "prob"], help="Type of knowledge possessed by attacker: full training and testing losses/confidence scores/probability vector of target model.")
+    parser.add_argument("--lira-known-member-perc", type= float, default=0.0, help="Percentage of victim node training data that is known as member to the attacker to train shadow model.")
+    parser.add_argument("--lira-known-nonmember-perc", type=float, default=0.1, help="Non-member fraction used for shadow training. A value of 0.1 means the attacker knows non-member samples equal to 10%% of the victim's training set size (drawn from test distribution).")
+    parser.add_argument("--lira-num-shadow-models", type=int, default=5, help="Amount of shadow models the attacker trains.")
+    parser.add_argument("--lira-shadow-model-lr", type=float, default=1e-3, help="Learning rate used by the attacker to train shadow model.")
+    parser.add_argument("--lira-shadow-model-epochs", type=int, default=5, help="Number of epochs used by the attacker when training the shadow model.")
+
+
 
     args = parser.parse_args()
     # if args.dataset == "mnist":

@@ -39,7 +39,14 @@ def build_settings():
         attacker_id=args.mia_attacker, 
         victim_id=args.mia_victim,     
         measurement_number=args.mia_measurement_number,
-        results_root="results_mia",
+        results_root=args.results_root,
+        mia_baseline_type=args.mia_baseline_type,
+        lira_known_member_perc = args.lira_known_member_perc,
+        lira_known_nonmember_perc = args.lira_known_nonmember_perc,
+        lira_num_shadow_models = args.lira_num_shadow_models,
+        lira_shadow_model_lr = args.lira_shadow_model_lr,
+        lira_shadow_model_epochs = args.lira_shadow_model_epochs,
+
     )
     return settings, learning_settings, mia_settings
 
