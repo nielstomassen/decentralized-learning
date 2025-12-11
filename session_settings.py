@@ -1,8 +1,6 @@
-from dataclasses import dataclass
-from typing import Optional
-
+from dataclasses import asdict, dataclass
 from dataclasses_json import dataclass_json
-
+import json
 
 @dataclass
 class LearningSettings:
@@ -15,6 +13,8 @@ class LearningSettings:
     batch_size: int
     local_epochs: int
 
+    def __str__(self):
+        return json.dumps(asdict(self), indent=4)
 
 @dataclass_json
 @dataclass
@@ -26,6 +26,9 @@ class SessionSettings:
     dataset: str
     model: str
     topology: str
+    partitioner: str
+    alpha: float
+    no_samples: int
     participants: int
     rounds: int
     seed: int
@@ -35,6 +38,8 @@ class SessionSettings:
     time_rounds: bool
     torch_device_name: str 
 
+    def __str__(self):
+        return json.dumps(asdict(self), indent=4)
     # algorithm: str
     # alpha: float = 1
     # validation_set_fraction: float = 0
@@ -57,3 +62,5 @@ class MIASettings:
     lira_shadow_model_lr: float = 1e-3
     lira_shadow_model_epochs: int = 5
 
+    def __str__(self):
+        return json.dumps(asdict(self), indent=4)

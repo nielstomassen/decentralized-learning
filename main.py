@@ -1,5 +1,7 @@
+import os
 import torch
 from src.mia_runner import MIARunner
+from src.plots import draw_topology, plot_mia_curves
 from src.topologies.topology_factory import TopologyFactory
 from src.data_utils.dataset_factory import DatasetFactory
 from src.models.model_factory import ModelFactory
@@ -24,6 +26,9 @@ def build_settings():
         dataset=args.dataset,
         model=args.model,
         topology=args.topology,
+        partitioner=args.partitioner,
+        alpha=args.alpha,
+        no_samples=args.no_samples,
         participants=args.peers,
         rounds=args.rounds,
         seed=args.seed,
@@ -54,14 +59,18 @@ def run():
     settings, learning_settings, mia_settings = build_settings()
     mia_runner = MIARunner(mia_settings) if mia_settings.attack_type != "none" else None
     set_global_seed(settings.seed)
-
+    print(settings)
     # 1. Load dataset
     dataloaders, test_loader = DatasetFactory.create(
         dataset_name=settings.dataset,
         num_nodes=settings.participants,
         train_batch_size=learning_settings.batch_size,
         val_batch_size=settings.validation_batch_size,
-        data_root="./data"
+        data_root="./data",
+        partioner=settings.partitioner,
+        alpha=settings.alpha,
+        no_samples=settings.no_samples,
+        seed=settings.seed
     )
 
     # 2. Build topology
@@ -69,13 +78,13 @@ def run():
         settings.topology, 
         num_nodes=settings.participants,
         shuffle_nodes=False
-    )  
-    topology.draw(save_path="plots/" + settings.topology)
+    )
+    draw_topology(save_root="plots/topologies/", topology=topology, topology_name=settings.topology)
     
     # 3. Initialize nodes
     model_fn = ModelFactory.create(settings.model, settings.dataset)
     nodes = create_nodes(settings, dataloaders, topology, model_fn)
-    print(settings.torch_device_name)
+    
     # 4. Training loop
     for rnd in range(settings.rounds):
         if(settings.time_rounds):
@@ -97,6 +106,10 @@ def run():
             end = time.perf_counter()
             duration = end - start
             print(f"The round took {duration:.3f} seconds")
+    
+    plot_mia_curves(mia_runner, settings)
+
+
  
 if __name__ == "__main__":
     run()

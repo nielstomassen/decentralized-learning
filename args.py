@@ -13,7 +13,7 @@ def get_args():
     # Important
     parser.add_argument('--dataset', type=str, default="mnist", choices=['mnist', 'cifar10'], help='Dataset to use.')
     parser.add_argument('--model', type=str, default="cnn", choices=['cnn', 'logreg'], help='Model type to use.')
-    parser.add_argument('--topology', type=str, default="ring", choices=["ring", "full", "fully_connected", "clique", "er", "erdos_renyi", "small_world", "ws", "star", "hub", "grid", "mesh", "lattice"], help='Communication topology between peers.')
+    parser.add_argument('--topology', type=str, default="ring", choices=["ring", "full", "fully_connected", "clique", "er", "erdos_renyi", "small_world", "ws", "star", "hub", "grid", "mesh", "lattice", "regular", "random_regular", "sbm"], help='Communication topology between peers.')
     parser.add_argument('--peers', type=int, default=10, help='Number of participants (nodes/clients).')
     parser.add_argument('--rounds', type=int, default=5, help='Number of training rounds.')
     parser.add_argument('--seed', type=int, default=42, help='Random seed for reproducibility.')
@@ -21,10 +21,11 @@ def get_args():
     parser.add_argument('--eval-interval', type=int, default=1, help='Evaluate every N rounds (only used if --eval is set).')
     parser.add_argument('--validation-batch-size', type=int, default=256, help='Batch size used during evaluation.')
     parser.add_argument('--time-rounds', dest='time_rounds', action='store_true', help='Measure and print the duration of each training round.')
+    parser.add_argument('--partitioner', type=str, default="iid", choices=["iid", "dirichlet"], help="Data partitioning strategy used.")
+    parser.add_argument('--alpha', type=float, default=0.1, help="Alpha used for dirichlet partitioning. Smaller alpha -> more skew; larger alpha -> closer to iid.")
+    parser.add_argument('--no-samples', type=int, default=None, help="Number of images to sample per node for dirichlet partitioning.")
     # Add later 
-    # parser.add_argument('--partitioner', type=str, default="iid", choices=["iid", "shards", "dirichlet"])
     # parser.add_argument('--log-level', type=str, default="INFO") 
-    # parser.add_argument('--alpha', type=float, default=0.1)
     # parser.add_argument('--algorithm', type=str, default="dpsgd", choices=["fl", "dpsgd", "gossip", "super-gossip", "adpsgd", "epidemic", "lubor", "conflux", "teleportation", "shatter"])
     # parser.add_argument('--validation-set-fraction', type=float, default=0.0)
     # parser.add_argument('--compute-validation-loss-global-model', action=argparse.BooleanOptionalAction)

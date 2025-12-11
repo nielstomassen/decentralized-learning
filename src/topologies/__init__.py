@@ -5,6 +5,8 @@ from .er_topology import ErdosRenyiTopology
 from .ws_topology import SmallWorldTopology
 from .star_topology import StarTopology
 from .grid_topology import GridTopology
+from .d_regular_topology import RandomRegularTopology
+from .stochastic_block_topology import StochasticBlockTopology
 
 __all__ = [
     "Topology",
@@ -13,5 +15,7 @@ __all__ = [
     "ErdosRenyiTopology",
     "SmallWorldTopology",
     "StarTopology",
-    "GridTopology"
+    "GridTopology",
+    "RandomRegularTopology",
+    "StochasticBlockTopology"
 ]

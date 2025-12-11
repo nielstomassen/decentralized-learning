@@ -9,7 +9,9 @@ from src.topologies import (
     ErdosRenyiTopology,
     SmallWorldTopology,
     StarTopology,
-    GridTopology
+    GridTopology,
+    RandomRegularTopology,
+    StochasticBlockTopology
 )
 
 
@@ -47,5 +49,27 @@ class TopologyFactory:
         
         elif name in ("grid", "mesh", "lattice"):
             return GridTopology(num_nodes, shuffle_nodes=shuffle_nodes)
+        
+        elif name in ("regular", "random_regular"):
+            degree = kwargs.get("degree", 3)
+            return RandomRegularTopology(
+                num_nodes,
+                degree=degree,
+                shuffle_nodes=shuffle_nodes,
+                seed=kwargs.get("seed", None),
+            )
+        
+        elif name in ("sbm", "block", "community"):
+            num_blocks = kwargs.get("num_blocks", 2)
+            p_in = kwargs.get("p_in", 0.5)
+            p_out = kwargs.get("p_out", 0.05)
+            return StochasticBlockTopology(
+                num_nodes,
+                num_blocks=num_blocks,
+                p_in=p_in,
+                p_out=p_out,
+                shuffle_nodes=shuffle_nodes,
+            )
+
         else:
             raise ValueError(f"Unknown topology: {name}")

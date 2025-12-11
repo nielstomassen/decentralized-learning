@@ -67,15 +67,16 @@ class Node:
         if not self._buffer_neighbor_models:
             return  # nothing to average
 
-        # include own parameters in the average
-        all_states = [self.model.state_dict()] + self._buffer_neighbor_models
-        avg_state = {}
+        with torch.no_grad():
+            # include own parameters in the average
+            all_states = [self.model.state_dict()] + self._buffer_neighbor_models
+            avg_state = {}
 
-        # assuming all_states have same keys (iterating over all keys)
-        # Will need to change if we implement chunking will nog longer match
-        for key in all_states[0].keys():
-            avg_param = sum(state[key] for state in all_states) / len(all_states)
-            avg_state[key] = avg_param
+            # assuming all_states have same keys (iterating over all keys)
+            # Will need to change if we implement chunking will nog longer match
+            for key in all_states[0].keys():
+                avg_param = sum(state[key] for state in all_states) / len(all_states)
+                avg_state[key] = avg_param
 
-        self.model.load_state_dict(avg_state)
-        self._buffer_neighbor_models = []
+            self.model.load_state_dict(avg_state)
+            self._buffer_neighbor_models = []

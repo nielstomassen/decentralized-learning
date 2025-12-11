@@ -16,6 +16,10 @@ class MIARunner:
     def __init__(self, config: MIASettings):
         self.config = config
 
+        self.aucs = []
+        self.train_accs = []
+        self.test_accs = []
+
     def maybe_run(
         self,
         round_nr: int,
@@ -37,13 +41,16 @@ class MIARunner:
 
         # interval check
         if (round_nr + 1) % cfg.interval != 0:
+            self.aucs.append(None)
+            self.mia_train_accs.append(None)
+            self.mia_test_accs.append(None)
             return None
 
         # Messages = what nodes send before averaging
         messages = {node.id: node.prepare_message() for node in nodes}
 
         if cfg.attack_type == "baseline":
-            return self._run_baseline_on_message(
+            result = self._run_baseline_on_message(
                 round_nr,
                 messages,
                 dataloaders,
@@ -52,7 +59,7 @@ class MIARunner:
                 device,
             )
         elif cfg.attack_type == "lira":
-            return self._run_lira_on_message(
+            result = self._run_lira_on_message(
                 round_nr,
                 messages,
                 dataloaders,
@@ -62,6 +69,11 @@ class MIARunner:
             )
         else:
             raise ValueError(f"Unknown MIA attack_type: {cfg.attack_type}")
+
+        self.aucs.append(result["auc"])
+        self.train_accs.append(result["train_accuracy"])
+        self.test_accs.append(result["test_accuracy"])
+        return result
 
     # ---------- concrete implementations ----------
 

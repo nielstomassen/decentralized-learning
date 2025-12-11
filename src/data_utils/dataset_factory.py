@@ -13,7 +13,11 @@ class DatasetFactory:
         num_nodes: int,
         train_batch_size: int,
         val_batch_size: int,
-        data_root: str = "./data",
+        partioner: str,
+        alpha: float,
+        no_samples: int,
+        seed: int,
+        data_root: str = "./data",       
     ) -> Tuple[list[DataLoader], DataLoader]:
         """
         Create train dataloaders (partitioned per node) and a test dataloader.
@@ -99,6 +103,10 @@ class DatasetFactory:
             train_dataset,
             num_nodes=num_nodes,
             batch_size=train_batch_size,
+            strategy=partioner,
+            dirichlet_alpha=alpha,
+            dirichlet_samples_per_node=no_samples,
+            seed=seed
         )
 
         return dataloaders, test_loader

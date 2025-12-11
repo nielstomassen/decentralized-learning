@@ -10,8 +10,8 @@ trap cleanup SIGINT
 
 python3 main.py --rounds 30 --peers 10 --seed 123 \
  --topology "full" --model "cnn" --dataset "mnist" \
- --time-rounds --local-epochs 5 --mia-attack "baseline" --mia-interval 1 \
- --mia-baseline-type "loss" &
+ --time-rounds --local-epochs 1 --mia-attack "baseline" --mia-interval 1 \
+ --mia-baseline-type "loss" --partitioner "dirichlet" &
 # > /dev/null 2>&1
 echo "Waiting for experiment to complete..."
 wait

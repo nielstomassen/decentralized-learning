@@ -1,5 +1,8 @@
+import random
+import numpy as np
+import torch
 from .node import Node
-from .utils import evaluate
+from .utils import evaluate, set_global_seed
 from mia_attacks import main_baseline
 import os
 
@@ -58,12 +61,19 @@ def run_round(round_nr: int, nodes, settings, test_loader, device: str, dataload
     do_eval = settings.enable_evaluation and ((round_nr + 1) % settings.eval_interval == 0)
     acc_before = None
     acc_after = None
-
+    print(sum(p.abs().sum().item() for p in nodes[0].model.parameters()))
     if(do_eval):
         acc_before = evaluate(nodes[0].model, test_loader, device=device)
 
     # 2) (Optional) run MIA before communication/averaging, but only every k rounds
+    
     # 3) Optional: run MIA on messages before communication/averaging
+    # Save training rng state
+    torch_state = torch.get_rng_state()
+    np_state = np.random.get_state()
+    py_state = random.getstate()
+    # Reseed for consistent mia attacks
+    set_global_seed(settings.seed)
     if mia_runner is not None:
         mia_runner.maybe_run(
             round_nr=round_nr,
@@ -73,7 +83,10 @@ def run_round(round_nr: int, nodes, settings, test_loader, device: str, dataload
             model_fn=model_fn,
             device=device,
         )
-
+    # Reload training rng state
+    torch.set_rng_state(torch_state)
+    np.random.set_state(np_state)
+    random.setstate(py_state)
     # 3) Communication
     communication_phase(nodes)
 
