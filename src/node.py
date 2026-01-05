@@ -2,22 +2,28 @@ import copy
 import torch
 
 class Node:
-    def __init__(self, node_id, model_fn, dataloader, neighbors, settings, global_init):
+    def __init__(self, node_id, model_fn, dataloader, neighbors, settings, global_init, neighbor_weights):
         self.id = node_id
         self.model = model_fn().to(settings.torch_device_name)             # fresh model instance
         self.dataloader = dataloader
         self.neighbors = neighbors           # list of neighbor node_ids
+        self.neighbor_weights = neighbor_weights  # dict {node_id: weight}
+        self.beta = settings.beta
+        self._state_before_local = None
+        self.message_type = settings.message_type  # "full" or "delta"
+
         self.optimizer = self.optimizer = torch.optim.SGD(
             self.model.parameters(),
             lr=settings.learning.learning_rate,
             momentum=settings.learning.momentum,
             weight_decay=settings.learning.weight_decay,
         )
-        self._buffer_neighbor_models = []    # for storing received models
-        self.model.load_state_dict(global_init)
+        self._buffer_neighbor_models = {}    # for storing received models
+        self.model.load_state_dict(global_init)      
 
     # num_steps = number of gradient steps the node takes this round
     def local_train(self, local_epochs=1, device="cpu"):
+        self._state_before_local = copy.deepcopy(self.model.state_dict())
         # Put model in training mode
         self.model.train()
         # Iterator over dataloader (so we can call next())
@@ -54,29 +60,61 @@ class Node:
 
     
     def prepare_message(self):
-        # state_dict() is a PyTorch nn.Module method:
-        # - returns a dict: {parameter_name: tensor, ...}
-        # - contains all learnable weights (and buffers) of the model
-        # We deepcopy it so we can send/average weights safely between nodes
-        return copy.deepcopy(self.model.state_dict())
+        cur = self.model.state_dict()
 
-    def receive_message(self, neighbor_state_dict):
-        self._buffer_neighbor_models.append(neighbor_state_dict)
+        if self.message_type == "full":
+            return copy.deepcopy(cur)
+
+        elif self.message_type == "delta":
+            if self._state_before_local is None:
+                raise RuntimeError("Delta message requested but no pre-local snapshot found.")
+            delta = {}
+            for k in cur.keys():
+                delta[k] = cur[k] - self._state_before_local[k]
+            return delta  # already new tensors; deepcopy optional
+        else:
+            raise ValueError(f"Unknown message_type: {self.message_type}")
+
+    def receive_message(self, neighbor_id, neighbor_state_dict):
+        self._buffer_neighbor_models[neighbor_id] = neighbor_state_dict
 
     def average_with_neighbors(self):
         if not self._buffer_neighbor_models:
             return  # nothing to average
 
+        beta = self.beta
+        assert 0.0 <= beta <= 1.0
+
         with torch.no_grad():
-            # include own parameters in the average
-            all_states = [self.model.state_dict()] + self._buffer_neighbor_models
-            avg_state = {}
+            self_state = self.model.state_dict()
+            new_state = {}
+            # keys of the parameter tensors
+            keys = self_state.keys()
 
-            # assuming all_states have same keys (iterating over all keys)
-            # Will need to change if we implement chunking will nog longer match
-            for key in all_states[0].keys():
-                avg_param = sum(state[key] for state in all_states) / len(all_states)
-                avg_state[key] = avg_param
+            if self.message_type == "full":
+                for k in keys:
+                    # 1) neighbor mixture: sum_j W_ij * theta_j[k]
+                    neighbor_mix = 0.0
+                    for nb_id, nb_state in self._buffer_neighbor_models.items():
+                        # Get nb weight or 0.0 if it doesnt exist (ignore it)
+                        w_ij = self.neighbor_weights.get(nb_id, 0.0)
+                        neighbor_mix = neighbor_mix + w_ij * nb_state[k]
 
-            self.model.load_state_dict(avg_state)
-            self._buffer_neighbor_models = []
+                    # 2) convex combination with self
+                    new_state[k] = (1.0 - beta) * self_state[k] + beta * neighbor_mix
+                
+            elif self.message_type == "delta":
+                # Delta rule: theta <- theta + beta * sum_j w_ij * delta_j
+                for k in keys:
+                    delta_mix = 0.0
+                    for nb_id, nb_delta in self._buffer_neighbor_models.items():
+                        w_ij = self.neighbor_weights.get(nb_id, 0.0)
+                        delta_mix = delta_mix + w_ij * nb_delta[k]
+
+                    new_state[k] = self_state[k] + beta * delta_mix
+
+            else:
+                raise ValueError(f"Unknown message_type: {self.message_type}")
+
+            self.model.load_state_dict(new_state)
+        self._buffer_neighbor_models = {}

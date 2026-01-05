@@ -17,6 +17,7 @@ class Topology(ABC):
 
         self.graph = g
         self.neighbors = self._graph_to_neighbors(self.graph)
+        self.weights = self._build_metropolis_weights()
 
     @abstractmethod
     def _build_graph(self) -> nx.Graph:
@@ -36,8 +37,31 @@ class Topology(ABC):
         random.shuffle(permuted)  # uses global random seed
         mapping = dict(zip(nodes, permuted))
         return nx.relabel_nodes(g, mapping)
+    
+    def _build_metropolis_weights(self):
+        g = self.graph
+        degrees = dict(g.degree())
+        weights = {int(i): {} for i in g.nodes()}  # row i → dict(neighbor->w_ij)
+
+        # Off-diagonal weights for undirected edges
+        for i, j in g.edges():
+            deg_i = degrees[i]
+            deg_j = degrees[j]
+            w_ij = 1.0 / max(deg_i, deg_j)
+            # symmetric
+            weights[int(i)][int(j)] = w_ij
+            weights[int(j)][int(i)] = w_ij
+
+        # Diagonal weights
+        for i in g.nodes():
+            row = weights[int(i)]
+            s_off = sum(row.values())
+            row[int(i)] = 1.0 - s_off  # self weight
+
+        return weights
 
     @abstractmethod
     def draw(self, title: str | None = None, save_path: str | None = None):
         """Draw this topology with a nice layout."""
         pass
+

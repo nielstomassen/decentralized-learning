@@ -20,6 +20,7 @@ def create_nodes(settings, dataloaders, topology, model_fn):
             neighbors=topology.neighbors[i],
             settings=settings,
             global_init=shared_init,
+            neighbor_weights=topology.weights[i],
         )
         nodes.append(node)
 
@@ -43,7 +44,7 @@ def communication_phase(nodes, messages=None):
 
     for node in nodes:
         for nb in node.neighbors:
-            node.receive_message(messages[nb])
+            node.receive_message(nb, messages[nb])
 
     return messages
 
@@ -72,8 +73,7 @@ def run_round(round_nr: int, nodes, settings, test_loader, device: str, dataload
     torch_state = torch.get_rng_state()
     np_state = np.random.get_state()
     py_state = random.getstate()
-    # Reseed for consistent mia attacks
-    set_global_seed(settings.seed)
+    
     if mia_runner is not None:
         mia_runner.maybe_run(
             round_nr=round_nr,
@@ -82,6 +82,8 @@ def run_round(round_nr: int, nodes, settings, test_loader, device: str, dataload
             test_loader=test_loader,
             model_fn=model_fn,
             device=device,
+            seed=settings.seed,
+            message_type=settings.message_type,
         )
     # Reload training rng state
     torch.set_rng_state(torch_state)

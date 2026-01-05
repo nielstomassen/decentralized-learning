@@ -24,6 +24,8 @@ def get_args():
     parser.add_argument('--partitioner', type=str, default="iid", choices=["iid", "dirichlet"], help="Data partitioning strategy used.")
     parser.add_argument('--alpha', type=float, default=0.1, help="Alpha used for dirichlet partitioning. Smaller alpha -> more skew; larger alpha -> closer to iid.")
     parser.add_argument('--no-samples', type=int, default=None, help="Number of images to sample per node for dirichlet partitioning.")
+    parser.add_argument('--beta', type=float, default = 0.2, help="Controls how strongly each node mixes its model with its neighbors during decentralized averaging. Beta=0 is no communication, beta=1 is full neighbor consensus (ignore own update).")
+    parser.add_argument('--message-type', type=str, default="full", choices=['full', 'delta'], help="Type of message sent by nodes to their neighbors; full model or just the model update.")
     # Add later 
     # parser.add_argument('--log-level', type=str, default="INFO") 
     # parser.add_argument('--algorithm', type=str, default="dpsgd", choices=["fl", "dpsgd", "gossip", "super-gossip", "adpsgd", "epidemic", "lubor", "conflux", "teleportation", "shatter"])
@@ -48,8 +50,9 @@ def get_args():
     parser.add_argument("--lira-num-shadow-models", type=int, default=5, help="Amount of shadow models the attacker trains.")
     parser.add_argument("--lira-shadow-model-lr", type=float, default=1e-3, help="Learning rate used by the attacker to train shadow model.")
     parser.add_argument("--lira-shadow-model-epochs", type=int, default=5, help="Number of epochs used by the attacker when training the shadow model.")
+    parser.add_argument("--mia-results-root", type=str, default="results", help="Directory to store output csv of MIA results in.")
 
-
+    parser.add_argument("--regular-degree", type=int, default=3, help="Degree to use when construction d-regular topology. Degree must satisfy 0 <= d < n and d * n must be even for a d-regular graph.")
 
     args = parser.parse_args()
     # if args.dataset == "mnist":

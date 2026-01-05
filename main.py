@@ -9,7 +9,7 @@ from src.utils import set_global_seed, get_torch_device
 from src.decentralized_training import create_nodes, run_round
 import time
 from args import get_args
-from session_settings import MIASettings, SessionSettings, LearningSettings
+from session_settings import MIASettings, SessionSettings, LearningSettings, TopologySettings
 import mia_attacks
 
 def build_settings():
@@ -20,23 +20,6 @@ def build_settings():
         weight_decay=args.weight_decay,
         batch_size=args.batch_size,
         local_epochs=args.local_epochs,
-    )
-    settings = SessionSettings(
-        learning=learning_settings,
-        dataset=args.dataset,
-        model=args.model,
-        topology=args.topology,
-        partitioner=args.partitioner,
-        alpha=args.alpha,
-        no_samples=args.no_samples,
-        participants=args.peers,
-        rounds=args.rounds,
-        seed=args.seed,
-        enable_evaluation=args.enable_evaluation,
-        eval_interval=args.eval_interval,
-        validation_batch_size=args.validation_batch_size,
-        time_rounds=args.time_rounds,
-        torch_device_name=get_torch_device(),
     )
     mia_settings = MIASettings(
         attack_type=args.mia_attack,   
@@ -51,12 +34,37 @@ def build_settings():
         lira_num_shadow_models = args.lira_num_shadow_models,
         lira_shadow_model_lr = args.lira_shadow_model_lr,
         lira_shadow_model_epochs = args.lira_shadow_model_epochs,
-
+        mia_results_root = args.mia_results_root,
     )
-    return settings, learning_settings, mia_settings
+    topology_settings = TopologySettings(
+        topology_name = args.topology,
+        regular_degree = args.regular_degree,
+    )
+    settings = SessionSettings(
+        learning=learning_settings,
+        mia=mia_settings,
+        topology=topology_settings,
+        dataset=args.dataset,
+        model=args.model,
+        partitioner=args.partitioner,
+        alpha=args.alpha,
+        beta=args.beta,
+        message_type=args.message_type,
+        no_samples=args.no_samples,
+        participants=args.peers,
+        rounds=args.rounds,
+        seed=args.seed,
+        enable_evaluation=args.enable_evaluation,
+        eval_interval=args.eval_interval,
+        validation_batch_size=args.validation_batch_size,
+        time_rounds=args.time_rounds,
+        torch_device_name=get_torch_device(),
+    )
+    
+    return settings, learning_settings, mia_settings, topology_settings
 
 def run():
-    settings, learning_settings, mia_settings = build_settings()
+    settings, learning_settings, mia_settings, topology_settings = build_settings()
     mia_runner = MIARunner(mia_settings) if mia_settings.attack_type != "none" else None
     set_global_seed(settings.seed)
     print(settings)
@@ -75,11 +83,12 @@ def run():
 
     # 2. Build topology
     topology = TopologyFactory.create(
-        settings.topology, 
+        topology_settings.topology_name, 
         num_nodes=settings.participants,
-        shuffle_nodes=False
+        shuffle_nodes=False,
+        degree=topology_settings.regular_degree,
     )
-    draw_topology(save_root="plots/topologies/", topology=topology, topology_name=settings.topology)
+    draw_topology(save_root="plots/topologies/", topology=topology, topology_name=topology_settings.topology_name)
     
     # 3. Initialize nodes
     model_fn = ModelFactory.create(settings.model, settings.dataset)
@@ -107,8 +116,8 @@ def run():
             duration = end - start
             print(f"The round took {duration:.3f} seconds")
     
-    plot_mia_curves(mia_runner, settings)
-
+    # plot_mia_curves(mia_runner, settings)
+    mia_runner.save_csv(settings=settings)
 
  
 if __name__ == "__main__":
