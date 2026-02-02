@@ -8,11 +8,11 @@ cleanup() {
 
 trap cleanup SIGINT
 
-python3 main.py --rounds 1 --peers 6 --seed 444 \
- --topology "regular" --regular-degree 5 --model "cnn" --dataset "mnist" \
- --time-rounds --local-epochs 1 --mia-attack "baseline" --mia-interval 1 \
- --mia-baseline-type "loss" --partitioner "dirichlet" --alpha 0.1 \
- --mia-results-root "results/test" &
+python3 main.py --rounds 5 --peers 100 --seed 4 \
+ --topology "er" --er-p 0.04 --beta 0.7 --model "cnn" --dataset "cifar10" \
+ --time-rounds --eval --local-epochs 2 --mia-attack "baseline" --mia-interval 5 \
+ --batch-size 64 --mia-baseline-type "loss" --partitioner "iid" --alpha 0.3 \
+ --mia-results-root "results/new/60/1epoch" --message-type "full" --mia-measurement-number 1000 &
 
 # > /dev/null 2>&1
 echo "Waiting for experiment to complete..."

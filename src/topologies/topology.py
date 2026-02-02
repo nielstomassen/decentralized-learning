@@ -18,6 +18,7 @@ class Topology(ABC):
         self.graph = g
         self.neighbors = self._graph_to_neighbors(self.graph)
         self.weights = self._build_metropolis_weights()
+        self._betweenness: Dict[int, float] = self._compute_betweenness()
 
     @abstractmethod
     def _build_graph(self) -> nx.Graph:
@@ -59,6 +60,17 @@ class Topology(ABC):
             row[int(i)] = 1.0 - s_off  # self weight
 
         return weights
+
+    def _compute_betweenness(self) -> Dict[int, float]:
+        # For undirected graphs, NetworkX returns dict keyed by node labels
+        bc = nx.betweenness_centrality(self.graph, normalized=True)
+        return {int(k): float(v) for k, v in bc.items()}
+
+    def betweenness(self, node_id: int) -> float:
+        return float(self._betweenness.get(int(node_id), 0.0))
+
+    def betweenness_map(self) -> Dict[int, float]:
+        return dict(self._betweenness)
 
     @abstractmethod
     def draw(self, title: str | None = None, save_path: str | None = None):

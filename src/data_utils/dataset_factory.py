@@ -18,7 +18,8 @@ class DatasetFactory:
         no_samples: int,
         seed: int,
         data_root: str = "./data",       
-    ) -> Tuple[list[DataLoader], DataLoader]:
+    ) -> Tuple[list[DataLoader], list[DataLoader]]:
+
         """
         Create train dataloaders (partitioned per node) and a test dataloader.
 
@@ -58,8 +59,8 @@ class DatasetFactory:
         elif name in ("cifar10", "cifar"):
             train_transform = transforms.Compose([
                 # add noise to increase effective dataset (makes training harder but less overfitting)
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomCrop(32, padding=4),
+                # transforms.RandomHorizontalFlip(),
+                # transforms.RandomCrop(32, padding=4),
                 transforms.ToTensor(),
                 # standard cifar10 normalization
                 transforms.Normalize(
@@ -91,15 +92,14 @@ class DatasetFactory:
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 
-        # Global test loader
-        test_loader = DataLoader(
+        global_test_loader = DataLoader(
             test_dataset,
             batch_size=val_batch_size,
             shuffle=False,
         )
 
         # Node-local train loaders
-        dataloaders = partition_dataset(
+        train_loaders, holdout_loaders = partition_dataset(
             train_dataset,
             num_nodes=num_nodes,
             batch_size=train_batch_size,
@@ -109,4 +109,4 @@ class DatasetFactory:
             seed=seed
         )
 
-        return dataloaders, test_loader
+        return train_loaders, holdout_loaders, global_test_loader

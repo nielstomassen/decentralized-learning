@@ -39,6 +39,13 @@ def build_settings():
     topology_settings = TopologySettings(
         topology_name = args.topology,
         regular_degree = args.regular_degree,
+        er_p=args.er_p,
+        sbm_num_blocks=args.sbm_num_blocks,
+        sbm_p_in=args.sbm_p_in,
+        sbm_p_out=args.sbm_p_out,
+        ws_k=args.ws_k,
+        ws_p=args.ws_p,
+        topology_seed=args.topology_seed,
     )
     settings = SessionSettings(
         learning=learning_settings,
@@ -54,6 +61,11 @@ def build_settings():
         participants=args.peers,
         rounds=args.rounds,
         seed=args.seed,
+        enable_dp=args.enable_dp,
+        dp_noise_multiplier=args.dp_noise_multiplier,
+        dp_max_grad_norm=args.dp_max_grad_norm,
+        dp_delta=args.dp_delta,
+        enable_chunking=args.enable_chunking,
         enable_evaluation=args.enable_evaluation,
         eval_interval=args.eval_interval,
         validation_batch_size=args.validation_batch_size,
@@ -69,7 +81,7 @@ def run():
     set_global_seed(settings.seed)
     print(settings)
     # 1. Load dataset
-    dataloaders, test_loader = DatasetFactory.create(
+    dataloaders, test_loaders, global_test_loader = DatasetFactory.create(
         dataset_name=settings.dataset,
         num_nodes=settings.participants,
         train_batch_size=learning_settings.batch_size,
@@ -80,13 +92,17 @@ def run():
         no_samples=settings.no_samples,
         seed=settings.seed
     )
+    sizes = [len(dl.dataset) for dl in dataloaders]
+    print("Per-node train samples:",
+        "size", min(sizes),
+        "sum", sum(sizes))
+
 
     # 2. Build topology
-    topology = TopologyFactory.create(
-        topology_settings.topology_name, 
+    topology = TopologyFactory.create_from_settings(
+        topology_settings=topology_settings, 
         num_nodes=settings.participants,
         shuffle_nodes=False,
-        degree=topology_settings.regular_degree,
     )
     draw_topology(save_root="plots/topologies/", topology=topology, topology_name=topology_settings.topology_name)
     
@@ -100,13 +116,15 @@ def run():
             start = time.perf_counter()
         run_round(
             round_nr=rnd,
+            topology=topology,
             nodes=nodes,
             settings=settings,
-            test_loader=test_loader,
+            test_loaders=test_loaders,
             device=settings.torch_device_name,
             dataloaders=dataloaders,
             model_fn=model_fn,
-            mia_runner=mia_runner
+            mia_runner=mia_runner,
+            global_test_loader=global_test_loader
         )
         if(settings.time_rounds):
             # Make sure all GPU work is finished before stopping the timer

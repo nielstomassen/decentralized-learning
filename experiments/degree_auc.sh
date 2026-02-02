@@ -8,27 +8,28 @@ cleanup() {
 
 trap cleanup SIGINT
 
-ALPHAS=(0.1 0.3 0.6 1)
-DEGREES=(1 2 3 4 5 6 7 8 9)
-SEEDS=(123 555 4242)
+SEEDS=(555 42 91 6060 49 1 406 5555 82828 683 258 2354 30636 693 14827)
+ER_PS=(0.08)
 
-MESSAGE_TYPE="delta"
-TOPOLOGY="regular"
+TOPOLOGY="er"
+ALPHA=0.8
 MODEL="cnn"
-DATASET="mnist"
-ROUNDS=30
-PEERS=10
-LOCAL_EPOCHS=1
+DATASET="cifar10"
+BETA=0.8
+ROUNDS=100
+PEERS=100
+LOCAL_EPOCHS=5
 MIA_ATTACK="baseline"
-MIA_INTERVAL=30
+MIA_INTERVAL=100
+MIA_N=1000
 MIA_TYPE="loss"
-PARTITIONER="dirichlet"
-MIA_RESULTS_ROOT="results/degree"
+PARTITIONER="iid"
+MESSAGE_TYPE="full"
+MIA_RESULTS_ROOT="results/highbeta/nochunk"
 
 mkdir -p logs
 
-echo "Running alpha sweep:  ${ALPHAS[@]}"
-echo "Using degrees:        ${DEGREES[@]}"
+echo "Running er_p:  ${ER_PS[@]}"
 echo "Using seeds:          ${SEEDS[@]}"
 echo
 # ============================================
@@ -37,41 +38,41 @@ echo
 
 MAX_JOBS=1
 job_count=0
-for ALPHA in "${ALPHAS[@]}"; do
-    for DEGREE in "${DEGREES[@]}"; do
-        for SEED in "${SEEDS[@]}"; do
-    
-        LOGFILE="logs/deg/alpha_${ALPHA}_degree_${DEGREE}_seed_${SEED}.log"
-        echo "Starting run for alpha=${ALPHA}, degree=${DEGREE}, seed=${SEED}"
+for ER_P in "${ER_PS[@]}"; do
+    for SEED in "${SEEDS[@]}"; do
 
-        python3 main.py \
-        --rounds $ROUNDS \
-        --peers $PEERS \
-        --seed $SEED \
-        --topology "$TOPOLOGY" \
-        --regular-degree $DEGREE \
-        --model "$MODEL" \
-        --dataset "$DATASET" \
-        --local-epochs $LOCAL_EPOCHS \
-        --time-rounds \
-        --mia-attack "$MIA_ATTACK" \
-        --mia-interval $MIA_INTERVAL \
-        --mia-baseline-type "$MIA_TYPE" \
-        --partitioner "$PARTITIONER" \
-        --message-type "$MESSAGE_TYPE" \
-        --alpha $ALPHA \
-        --mia-results-root $MIA_RESULTS_ROOT \
-        > "$LOGFILE" 2>&1 &
+    LOGFILE="logs/ring/er_${ER_P}_topology_${TOPOLOGY}_seed_${SEED}.log"
+    echo "Starting run for p=${ER_P}, seed=${SEED}"
 
-        ((job_count++))
+    python3 main.py \
+    --rounds $ROUNDS \
+    --peers $PEERS \
+    --seed $SEED \
+    --topology "$TOPOLOGY" \
+    --model "$MODEL" \
+    --dataset "$DATASET" \
+    --local-epochs $LOCAL_EPOCHS \
+    --time-rounds \
+    --mia-attack "$MIA_ATTACK" \
+    --mia-interval $MIA_INTERVAL \
+    --mia-baseline-type "$MIA_TYPE" \
+    --partitioner "$PARTITIONER" \
+    --message-type "$MESSAGE_TYPE" \
+    --alpha $ALPHA \
+    --no-samples $MIA_N \
+    --er-p $ER_P \
+    --mia-results-root $MIA_RESULTS_ROOT \
+    --beta $BETA \
+    > "$LOGFILE" 2>&1 &
 
-        if (( job_count >= MAX_JOBS )); then
-        # Wait for any one job to finish (bash 5+)
-        wait -n
-        ((job_count--))
-        fi
+    ((job_count++))
+
+    if (( job_count >= MAX_JOBS )); then
+    # Wait for any one job to finish (bash 5+)
+    wait -n
+    ((job_count--))
+    fi
         
-    done
   done
 done
 

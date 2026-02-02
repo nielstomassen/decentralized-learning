@@ -1,75 +1,70 @@
 # cifar10_cnn.py
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class Cifar10CNN(nn.Module):
-    """
-    Small CNN for 32x32 RGB images (e.g. CIFAR-10).
-
-    Architecture (fairly standard):
-    - Conv(3 -> 32), ReLU, MaxPool
-    - Conv(32 -> 64), ReLU, MaxPool
-    - Conv(64 -> 128), ReLU, MaxPool
-    - FC: 128 * 4 * 4 -> 256, ReLU
-    - FC: 256 -> 10
-    """
-
-    def __init__(self, in_channels: int = 3, num_classes: int = 10):
+    def __init__(self, in_channels: int = 3, num_classes: int = 10, dropout_p: float = 0):
         super().__init__()
 
-        # Convolutional feature extractor
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=32,
-            kernel_size=3,
-            padding=1
-        )  # output: 32 x 32 x 32
-        self.conv2 = nn.Conv2d(
-            in_channels=32,
-            out_channels=64,
-            kernel_size=3,
-            padding=1
-        )  # output: 64 x 16 x 16 (after pool)
-        self.conv3 = nn.Conv2d(
-            in_channels=64,
-            out_channels=128,
-            kernel_size=3,
-            padding=1
-        )  # output: 128 x 8 x 8 (after pool)
+        def conv_bn_relu(cin: int, cout: int) -> nn.Sequential:
+            return nn.Sequential(
+                nn.Conv2d(cin, cout, kernel_size=3, padding=1, bias=False),
+                nn.GroupNorm(32, cout),
+                nn.ReLU(inplace=False),
+            )
 
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)  # halves H and W
+        # Feature extractor
+        self.block1 = nn.Sequential(
+            conv_bn_relu(in_channels, 64),
+            conv_bn_relu(64, 64),
+            nn.MaxPool2d(2),         
+            nn.Dropout(p=dropout_p),
+        )
 
-        # After three pooling layers: 32 -> 16 -> 8 -> 4
-        self.fc1 = nn.Linear(128 * 4 * 4, 256)
-        self.fc2 = nn.Linear(256, num_classes)
+        self.block2 = nn.Sequential(
+            conv_bn_relu(64, 128),
+            conv_bn_relu(128, 128),
+            nn.MaxPool2d(2),          
+            nn.Dropout(p=dropout_p),
+        )
 
-    def feature(self, x):
-        """
-        Return the convolutional feature representation before the FC layers.
-        Shape in:  (batch, in_channels, 32, 32)
-        Shape out: (batch, 128 * 4 * 4)
-        """
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.pool(x)      # (batch, 32, 16, 16)
+        self.block3 = nn.Sequential(
+            conv_bn_relu(128, 256),
+            conv_bn_relu(256, 256),
+            nn.MaxPool2d(2),          
+            nn.Dropout(p=dropout_p),
+        )
 
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = self.pool(x)      # (batch, 64, 8, 8)
+        # Head: global average pool + linear
+        self.gap = nn.AdaptiveAvgPool2d((1, 1))  # (B, 256, 1, 1)
+        self.fc = nn.Linear(256, num_classes)
 
-        x = self.conv3(x)
-        x = F.relu(x)
-        x = self.pool(x)      # (batch, 128, 4, 4)
+        self._init_weights()
 
-        # Flatten for fully-connected layers
-        x = x.view(x.size(0), -1)  # (batch, 128*4*4)
+    def _init_weights(self) -> None:
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            elif isinstance(m, nn.GroupNorm):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
+
+    def feature(self, x: torch.Tensor) -> torch.Tensor:
+        # Return flattened features before classifier
+        x = self.block1(x)
+        x = self.block2(x)
+        x = self.block3(x)
+        x = self.gap(x)
+        x = torch.flatten(x, 1)  # (B, 256)
         return x
 
-    def forward(self, x):
-        # Use the shared feature extractor
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.feature(x)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)            # logits (batch, num_classes)
+        x = self.fc(x)
         return x

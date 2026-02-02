@@ -1,12 +1,13 @@
 # stochastic_block_topology.py
 
-from typing import List
+from typing import List, Optional
 import networkx as nx
 import matplotlib.pyplot as plt
 
 from .topology import Topology
 
 import numpy as np
+
 
 def spectral_gap(g: nx.Graph) -> float:
     """
@@ -22,19 +23,6 @@ def spectral_gap(g: nx.Graph) -> float:
 class StochasticBlockTopology(Topology):
     """
     Stochastic Block Model (SBM) topology with tunable community structure.
-
-    Parameters
-    ----------
-    num_nodes : int
-        Total number of nodes.
-    num_blocks : int, default 2
-        Number of communities/blocks.
-    p_in : float, default 0.5
-        Intra-community edge probability.
-    p_out : float, default 0.05
-        Inter-community edge probability.
-    shuffle_nodes : bool, default False
-        Whether to randomly relabel node ids.
     """
 
     def __init__(
@@ -44,10 +32,13 @@ class StochasticBlockTopology(Topology):
         p_in: float = 0.5,
         p_out: float = 0.05,
         shuffle_nodes: bool = False,
+        seed: Optional[int] = None,
     ):
         self.num_blocks = num_blocks
         self.p_in = p_in
         self.p_out = p_out
+        self.seed = seed
+
         self._sizes: List[int] = []
         self._block_membership: List[int] = []
 
@@ -72,7 +63,7 @@ class StochasticBlockTopology(Topology):
         g = nx.stochastic_block_model(
             sizes,
             probs,
-            seed=None,      # uses global RNG; controlled because we set random seed earlier
+            seed=self.seed,
             directed=False,
         )
 
@@ -80,9 +71,11 @@ class StochasticBlockTopology(Topology):
         membership: List[int] = []
         for block_idx, size in enumerate(sizes):
             membership.extend([block_idx] * size)
-        # `stochastic_block_model` labels nodes from 0..num_nodes-1 in order
         self._block_membership = membership
-        print(spectral_gap(g))
+
+        # Optional: don't print in library code (can be noisy), but keep if you want
+        # print(spectral_gap(g))
+
         return g
 
     def draw(self, title: str | None = None, save_path: str | None = None):
@@ -92,7 +85,7 @@ class StochasticBlockTopology(Topology):
         else:
             colors = None
 
-        pos = nx.spring_layout(self.graph)
+        pos = nx.spring_layout(self.graph, seed=self.seed)
         plt.figure(figsize=(4, 4))
         nx.draw(
             self.graph,
@@ -105,7 +98,9 @@ class StochasticBlockTopology(Topology):
             cmap=plt.cm.tab10 if colors is not None else None,
         )
 
-        plt.title(title or f"Stochastic Block Topology (p_in={self.p_in}, p_out={self.p_out})")
+        plt.title(
+            title
+            or f"Stochastic Block Topology (p_in={self.p_in}, p_out={self.p_out}, seed={self.seed})"
+        )
         if save_path is not None:
             plt.savefig(save_path, bbox_inches="tight")
-        # plt.show()  

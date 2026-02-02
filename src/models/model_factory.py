@@ -4,6 +4,7 @@ from .mnist_logreg import MnistLogReg
 from .mnist_cnn import MnistCNN
 from .cifar10_cnn import Cifar10CNN
 from .cifar10_logreg import Cifar10LogReg
+from .cifar10_resnet import resnet32_cifar_gn
 
 class ModelFactory:
     @staticmethod
@@ -37,12 +38,13 @@ class ModelFactory:
             else:
                 raise ValueError(f"CNN not supported for dataset: {dataset_name}")
 
-        # --- ResNet (to be implemented later) ---
-        if mt in ("resnet", "resnet18", "resnet20"):
-            raise ValueError(
-                f"ResNet models not implemented yet for dataset '{dataset_name}'. "
-                "Add the appropriate ResNet class and wiring in ModelFactory.create()."
-            )
+        # --- ResNet ---
+        if mt in ("resnet", "resnet32"):
+            if ds in ("cifar10", "cifar"):
+                def model_fn():
+                    return resnet32_cifar_gn(num_classes=10, gn_groups=8)
+                return model_fn
+
 
         # --- Logistic Regression  ---
         if mt in ("logreg", "logistic", "logistic_regression"):

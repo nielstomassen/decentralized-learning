@@ -20,7 +20,24 @@ def build_classes_dict(dataset):
             classes[label] = [ind]
     return classes
 
-def make_dataloaders_from_indices(dataset, indices_per_node, batch_size: int = 32):
+def split_train_holdout(indices_per_node, holdout_frac: float, seed: int):
+    rng = np.random.RandomState(seed)
+    train_indices_per_node = []
+    holdout_indices_per_node = []
+
+    for node_id, inds in enumerate(indices_per_node):
+        inds = np.array(inds)
+        rng.shuffle(inds)  # deterministic
+        n_holdout = int(round(len(inds) * holdout_frac))
+        holdout = inds[:n_holdout].tolist()
+        train = inds[n_holdout:].tolist()
+
+        train_indices_per_node.append(train)
+        holdout_indices_per_node.append(holdout)
+
+    return train_indices_per_node, holdout_indices_per_node
+
+def make_dataloaders_from_indices(dataset, indices_per_node, batch_size: int = 32, seed: int = 123):
     """
     indices_per_node: list[list[int]] of length num_nodes
     """
@@ -28,7 +45,7 @@ def make_dataloaders_from_indices(dataset, indices_per_node, batch_size: int = 3
     for node_id, subset_indices in enumerate(indices_per_node):
         # per-node generator, but deterministic
         g = torch.Generator()
-        g.manual_seed(torch.initial_seed() + node_id)
+        g.manual_seed(seed + node_id)
 
         loaders.append(
             DataLoader(
@@ -141,6 +158,7 @@ def partition_dataset(
         max number of samples per client in Dirichlet case (None = keep all)
     """
     random.seed(seed)
+    np.random.seed(seed)
     if strategy == "iid":
         indices_per_node = iid_partition_indices(len(dataset), num_nodes, shuffle=shuffle)
 
@@ -151,10 +169,17 @@ def partition_dataset(
             no_samples=dirichlet_samples_per_node,
             alpha=dirichlet_alpha,
         )
-
     else:
         raise ValueError(f"Unknown partition strategy: {strategy}")
 
-    # finally turn indices into DataLoaders
-    return make_dataloaders_from_indices(dataset, indices_per_node, batch_size=batch_size)
+    train_idx, holdout_idx = split_train_holdout(
+            indices_per_node,
+            holdout_frac=0.2,   
+            seed=seed + 12345   # <-- offset to avoid coupling with earlier shuffles
+    )  
+
+    train_loaders = make_dataloaders_from_indices(dataset, train_idx, batch_size=batch_size, seed=seed)
+    holdout_loaders = make_dataloaders_from_indices(dataset, holdout_idx, batch_size=batch_size, seed=seed+999)
+
+    return train_loaders, holdout_loaders
 

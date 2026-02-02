@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from session_settings import TopologySettings
 from src.topologies import (
     Topology,
     RingTopology,
@@ -37,12 +38,12 @@ class TopologyFactory:
 
         elif name in ("er", "erdos_renyi"):
             p = kwargs.get("p", 0.2)
-            return ErdosRenyiTopology(num_nodes, p=p, shuffle_nodes=shuffle_nodes)
+            return ErdosRenyiTopology(num_nodes, p=p, shuffle_nodes=shuffle_nodes, seed=kwargs.get("seed", None))
 
         elif name in ("small_world", "ws"):
             k = kwargs.get("k", 4)
             p = kwargs.get("p", 0.1)
-            return SmallWorldTopology(num_nodes, k=k, p=p, shuffle_nodes=shuffle_nodes)
+            return SmallWorldTopology(num_nodes, k=k, p=p, shuffle_nodes=shuffle_nodes, seed=kwargs.get("seed", None))
         
         elif name in ("star", "hub"):
             return StarTopology(num_nodes, shuffle_nodes=shuffle_nodes)
@@ -69,7 +70,58 @@ class TopologyFactory:
                 p_in=p_in,
                 p_out=p_out,
                 shuffle_nodes=shuffle_nodes,
+                seed=kwargs.get("seed", None)
             )
 
         else:
             raise ValueError(f"Unknown topology: {name}")
+
+    @staticmethod
+    def create_from_settings(
+        topology_settings: TopologySettings,
+        num_nodes: int,
+        shuffle_nodes: bool = False,
+    ) -> Topology:
+        name = topology_settings.topology_name.lower()
+
+        if name in ("regular", "random_regular"):
+            return TopologyFactory.create(
+                name,
+                num_nodes,
+                shuffle_nodes=shuffle_nodes,
+                degree=topology_settings.regular_degree,
+                seed=topology_settings.topology_seed,
+            )
+
+        if name in ("er", "erdos_renyi"):
+            return TopologyFactory.create(
+                name,
+                num_nodes,
+                shuffle_nodes=shuffle_nodes,
+                p=topology_settings.er_p,
+                seed=topology_settings.topology_seed
+            )
+
+        if name in ("ws", "small_world"):
+            return TopologyFactory.create(
+                name,
+                num_nodes,
+                shuffle_nodes=shuffle_nodes,
+                k=topology_settings.ws_k,
+                p=topology_settings.ws_p,
+                seed=topology_settings.topology_seed
+            )
+
+        if name in ("sbm", "block", "community"):
+            return TopologyFactory.create(
+                name,
+                num_nodes,
+                shuffle_nodes=shuffle_nodes,
+                num_blocks=topology_settings.sbm_num_blocks,
+                p_in=topology_settings.sbm_p_in,
+                p_out=topology_settings.sbm_p_out,
+                seed=topology_settings.topology_seed
+            )
+
+        # ring/full/star/grid don't need extra params
+        return TopologyFactory.create(name, num_nodes, shuffle_nodes=shuffle_nodes)

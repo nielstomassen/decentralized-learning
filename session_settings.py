@@ -38,7 +38,14 @@ class MIASettings:
 @dataclass
 class TopologySettings:
     topology_name: str
-    regular_degree: int   
+    regular_degree: int
+    er_p: float
+    sbm_num_blocks: int
+    sbm_p_in: float
+    sbm_p_out: float
+    ws_k: int
+    ws_p: float
+    topology_seed: int   
     
     def __str__(self):
         return json.dumps(asdict(self), indent=4)
@@ -62,6 +69,11 @@ class SessionSettings:
     participants: int
     rounds: int
     seed: int
+    enable_dp: bool
+    dp_noise_multiplier: float
+    dp_max_grad_norm: float
+    dp_delta: float
+    enable_chunking: bool
     enable_evaluation: bool 
     eval_interval: int  
     validation_batch_size: int
