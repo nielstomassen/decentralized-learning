@@ -11,7 +11,7 @@ def get_args():
     parser.add_argument('--local-epochs', type=int, default=1, help='Number of local epochs per round on each peer.')
 
     # Important
-    parser.add_argument('--dataset', type=str, default="mnist", choices=['mnist', 'cifar10'], help='Dataset to use.')
+    parser.add_argument('--dataset', type=str, default="mnist", choices=['mnist', 'cifar10', "cifar100", "fashionmnist", "emnist"], help='Dataset to use.')
     parser.add_argument('--model', type=str, default="cnn", choices=['cnn', 'logreg', "resnet", "resnet20", "resnet32", "resnet56"], help='Model type to use.')
     parser.add_argument('--topology', type=str, default="ring", choices=["ring", "full", "fully_connected", "clique", "er", "erdos_renyi", "small_world", "ws", "star", "hub", "grid", "mesh", "lattice", "regular", "random_regular", "sbm"], help='Communication topology between peers.')
     parser.add_argument('--peers', type=int, default=10, help='Number of participants (nodes/clients).')
@@ -44,6 +44,8 @@ def get_args():
         choices=["none", "baseline", "lira"],
         help="Type of MIA attack to run each interval."
     )
+    parser.add_argument("--one-attacker", action="store_true",
+                    help="Only attack each node with one neighbor instead of all neighbors.")
     parser.add_argument("--results-root", type=str, default="results_mia", help="Location to store mia results (config + auc plots).")
     parser.add_argument("--mia-interval", type=int, default=1, help="Round interval to run mia attack.")
     parser.add_argument("--mia-attacker", type=int, default=0, help="Node id of attacker")

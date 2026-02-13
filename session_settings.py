@@ -24,6 +24,7 @@ class MIASettings:
     victim_id: int = 1
     measurement_number: int = 100
     results_root: str = "results_mia"
+    one_attacker: bool = False
     mia_baseline_type: str = "loss"
     lira_known_member_perc: float = 0.05
     lira_known_nonmember_perc: float = 0.1

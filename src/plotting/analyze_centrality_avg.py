@@ -114,11 +114,19 @@ def scatter_plot(
     y2: Optional[np.ndarray] = None,
     y2_label: str = "",
     y2_color: str = "tab:orange",
+    xlim: Optional[Tuple[float, float]] = None,
+    ylim: Optional[Tuple[float, float]] = None,
+    y2lim: Optional[Tuple[float, float]] = None,
 ):
     """
     Scatter AUC (y) vs x (unaveraged across x; one point per node).
     If y2 is provided, plot mean(y2) per unique x on a second y-axis (right axis),
     using a different color.
+
+    Axis fixing:
+      - xlim fixes x-axis range
+      - ylim fixes primary y-axis (AUC) range
+      - y2lim fixes secondary y-axis (global_test_acc) range (if plotted)
     """
     fig, ax1 = plt.subplots()
 
@@ -127,7 +135,13 @@ def scatter_plot(
     ax1.set_xlabel(xlabel)
     ax1.set_ylabel(ylabel)
 
+    if xlim is not None:
+        ax1.set_xlim(xlim)
+    if ylim is not None:
+        ax1.set_ylim(ylim)
+
     # Optional second axis: average y2 per unique x (e.g., per degree)
+    ax2 = None
     if y2 is not None:
         x_arr = np.asarray(x, dtype=float)
         y2_arr = np.asarray(y2, dtype=float)
@@ -147,13 +161,16 @@ def scatter_plot(
                 ys2,
                 marker="o",
                 linestyle="-",
-                color=y2_color,   # different color
+                color=y2_color,  # different color
                 linewidth=2,
                 markersize=4,
                 label=y2_label or "global_test_acc (mean per x)",
             )
             ax2.set_ylabel(y2_label or "global_test_acc (mean per x)", color=y2_color)
             ax2.tick_params(axis="y", colors=y2_color)
+
+            if y2lim is not None:
+                ax2.set_ylim(y2lim)
 
     # Title / annotation
     if annotate and annotate.get("n", 0) >= 3:
@@ -171,7 +188,6 @@ def scatter_plot(
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
-
 
 
 def binned_mean_plot(x, y, xlabel, ylabel, title, out_path, n_bins: int = 6):
@@ -242,6 +258,18 @@ def main():
         action="store_true",
         help="If present (and column exists), overlay global_test_acc on a second y-axis in scatter plots.",
     )
+
+    # NEW: fixed axis limits for cross-graph comparability
+    ap.add_argument("--xlim", type=float, nargs=2, default=None, help="Fix x-axis limits: min max")
+    ap.add_argument("--ylim", type=float, nargs=2, default=None, help="Fix primary y-axis (AUC) limits: min max")
+    ap.add_argument(
+        "--y2lim",
+        type=float,
+        nargs=2,
+        default=None,
+        help="Fix secondary y-axis (global_test_acc) limits: min max (only used if plotted).",
+    )
+
     args = ap.parse_args()
 
     files = sorted(glob.glob(args.results_glob))
@@ -345,6 +373,9 @@ def main():
                 annotate=st,
                 y2=y2,
                 y2_label=y2_label,
+                xlim=tuple(args.xlim) if args.xlim is not None else None,
+                ylim=tuple(args.ylim) if args.ylim is not None else None,
+                y2lim=tuple(args.y2lim) if args.y2lim is not None else None,
             )
 
             binned_mean_plot(

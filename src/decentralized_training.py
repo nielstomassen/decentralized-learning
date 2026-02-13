@@ -27,7 +27,7 @@ def create_nodes(settings, dataloaders, topology, model_fn):
             d0 = getattr(settings, "dp_ref_degree", 4)  # average degree (normal noise)
             scale = (d0 / d) ** 0.5
 
-            sigma = settings.dp_noise_multiplier * scale
+            sigma = settings.dp_noise_multiplier # * scale
             sigma = min(sigma, getattr(settings, "dp_sigma_cap", 10.0))  
             node.enable_dp_training(
                 noise_multiplier=sigma,
@@ -101,7 +101,13 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
         for victim in nodes:
             if not victim.neighbors:
                 continue
-            attackers_for_victim[victim.id] = list(victim.neighbors)
+            if getattr(settings.mia, "one_attacker", False):
+                # deterministic choice (good for reproducibility)
+                rng = random.Random(settings.seed + round_nr + victim.id)
+                attackers_for_victim[victim.id] = [rng.choice(list(victim.neighbors))]
+            else:
+                attackers_for_victim[victim.id] = list(victim.neighbors)
+            
 
 
         mia_runner.maybe_run(

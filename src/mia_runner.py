@@ -7,6 +7,7 @@ import random
 import numpy as np
 import torch
 import networkx as nx
+from collections import OrderedDict
 
 from mia_attacks import main_baseline, main_lira
 from session_settings import MIASettings, SessionSettings
@@ -35,6 +36,15 @@ class MIARunner:
         self.avg_chunk_frac: list[dict] = []
         self.max_chunk_frac: list[dict] = []
         self.argmax_chunk_attacker: list[dict] = []
+
+    
+    @staticmethod
+    def _strip_prefix_if_present(state, prefixes=("_module.", "module.")):
+        # If state keys are wrapped (Opacus or DDP), strip the prefix
+        for p in prefixes:
+            if any(k.startswith(p) for k in state.keys()):
+                return OrderedDict((k[len(p):], v) if k.startswith(p) else (k, v) for k, v in state.items())
+        return state
 
     def maybe_run(
         self,
@@ -284,7 +294,8 @@ class MIARunner:
                 raise ValueError(f"Unknown message_type: {message_type}")
 
         proxy = model_fn()
-        proxy.load_state_dict(base_state)
+        base_state = self._strip_prefix_if_present(base_state)
+        proxy.load_state_dict(base_state, strict=True)
         proxy.to(device).eval()
         return proxy
 

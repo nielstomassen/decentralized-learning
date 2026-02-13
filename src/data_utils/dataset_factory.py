@@ -2,11 +2,27 @@
 
 from typing import Tuple, List
 from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
+import torch
 from torchvision import datasets, transforms
 
-from .partitioner import partition_dataset  
+from .partitioner import partition_dataset
+  
+class LabelOffset(Dataset):
+        def __init__(self, base: Dataset, offset: int):
+            self.base = base
+            self.offset = offset
 
-class DatasetFactory:
+        def __len__(self):
+            return len(self.base)
+
+        def __getitem__(self, idx):
+            x, y = self.base[idx]
+            if torch.is_tensor(y):
+                y = y.item()
+            return x, int(y) + self.offset
+        
+class DatasetFactory: 
     @staticmethod
     def create(
         dataset_name: str,
@@ -55,14 +71,34 @@ class DatasetFactory:
                 download=True,
                 transform=transform,
             )
-
-        elif name in ("cifar10", "cifar"):
-            train_transform = transforms.Compose([
-                # add noise to increase effective dataset (makes training harder but less overfitting)
-                # transforms.RandomHorizontalFlip(),
-                # transforms.RandomCrop(32, padding=4),
+        elif name in ("fashionmnist", "fashion"):
+            transform = transforms.Compose([
                 transforms.ToTensor(),
-                # standard cifar10 normalization
+                transforms.Normalize((0.2860,), (0.3530,)),  # common FashionMNIST stats
+            ])
+
+            train_dataset = datasets.FashionMNIST(
+                root=data_root, train=True, download=True, transform=transform
+            )
+            test_dataset = datasets.FashionMNIST(
+                root=data_root, train=False, download=True, transform=transform
+            )
+        elif name in ("emnist",):
+            split = "balanced"
+            transform = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,)),
+            ])
+
+            train_dataset = datasets.EMNIST(root=data_root, split=split, train=True, download=True, transform=transform)
+            test_dataset  = datasets.EMNIST(root=data_root, split=split, train=False, download=True, transform=transform)
+
+            # EMNIST letters is commonly labeled 1..26; shift to 0..25 for CrossEntropyLoss
+            # train_dataset = LabelOffset(train_dataset, offset=-1)
+            # test_dataset  = LabelOffset(test_dataset, offset=-1)
+        elif name in ("cifar10", "cifar100", "cifar"):
+            train_transform = transforms.Compose([
+                transforms.ToTensor(),
                 transforms.Normalize(
                     mean=[0.4914, 0.4822, 0.4465],
                     std=[0.2470, 0.2435, 0.2616],
@@ -76,13 +112,15 @@ class DatasetFactory:
                 ),
             ])
 
-            train_dataset = datasets.CIFAR10(
+            ds_cls = datasets.CIFAR100 if name == "cifar100" else datasets.CIFAR10
+
+            train_dataset = ds_cls(
                 root=data_root,
                 train=True,
                 download=True,
                 transform=train_transform,
             )
-            test_dataset = datasets.CIFAR10(
+            test_dataset = ds_cls(
                 root=data_root,
                 train=False,
                 download=True,
@@ -110,3 +148,6 @@ class DatasetFactory:
         )
 
         return train_loaders, holdout_loaders, global_test_loader
+
+
+    

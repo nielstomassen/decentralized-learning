@@ -28,6 +28,7 @@ def build_settings():
         victim_id=args.mia_victim,     
         measurement_number=args.mia_measurement_number,
         results_root=args.results_root,
+        one_attacker=args.one_attacker,
         mia_baseline_type=args.mia_baseline_type,
         lira_known_member_perc = args.lira_known_member_perc,
         lira_known_nonmember_perc = args.lira_known_nonmember_perc,

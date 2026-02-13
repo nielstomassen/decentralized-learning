@@ -87,29 +87,28 @@ def dirichlet_partition_indices(
 ):
     data_classes = build_classes_dict(dataset)  # label -> list of indices
     # assumes all classes equal size
-    class_size = len(data_classes[0])
+    class_labels = sorted(data_classes.keys())
     per_participant_list = defaultdict(list)
     per_samples_list = defaultdict(list)
-    no_classes = len(data_classes.keys())
 
-    # --- Dirichlet allocation per class ---
-    for n in range(no_classes):
-        image_num = []
+    for lbl in class_labels:
         # Shuffle otherwise low-index nodes would always get early samples
-        random.shuffle(data_classes[n])
+        random.shuffle(data_classes[lbl])
+
+        class_size = len(data_classes[lbl])  # <-- don't assume equal size or label 0 exists
         # How many samples each node gets of this class
         sampled_probabilities = class_size * np.random.dirichlet(
-            np.array([alpha] * num_nodes))
+            np.array([alpha] * num_nodes)
+        )
 
         for node in range(num_nodes):
             # How many samples this node gets of this class (rounded)
             no_imgs = int(round(sampled_probabilities[node]))
             # the first no_imgs remaining samples for class n
-            sampled_list = data_classes[n][:min(len(data_classes[n]), no_imgs)]
-            image_num.append(len(sampled_list))
+            sampled_list = data_classes[lbl][:min(len(data_classes[lbl]), no_imgs)]
             per_participant_list[node].extend(sampled_list)
             # Remove samples that were sampled from data_classes
-            data_classes[n] = data_classes[n][min(len(data_classes[n]), no_imgs):]
+            data_classes[lbl] = data_classes[lbl][min(len(data_classes[lbl]), no_imgs):]
 
     # IF not passed len(dataset) is used as an upperbound.
     # Will always get reduced to the smallest number of sampled images for any node

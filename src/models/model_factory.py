@@ -25,14 +25,21 @@ class ModelFactory:
 
         # --- CNNs ---
         if mt in ("cnn", "conv", "convnet"):
-            if ds == "mnist":
+            if ds in ("mnist", "fashionmnist"):
                 def model_fn():
                     return MnistCNN(in_channels=1, num_classes=10)
                 return model_fn
-
+            elif ds == "emnist":
+                def model_fn():
+                    return MnistCNN(in_channels=1, num_classes=47)
+                return model_fn
             elif ds in ("cifar10", "cifar"):
                 def model_fn():
                     return Cifar10CNN(in_channels=3, num_classes=10)
+                return model_fn
+            elif ds == "cifar100":
+                def model_fn():
+                    return Cifar10CNN(in_channels=3, num_classes=100)
                 return model_fn
 
             else:
