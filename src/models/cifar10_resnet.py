@@ -32,7 +32,7 @@ class BasicBlock(nn.Module):
     def forward(self, x):
         out = F.relu(self.norm1(self.conv1(x)))
         out = self.norm2(self.conv2(out))
-        out += self.shortcut(x)
+        out = out + self.shortcut(x)
         return F.relu(out)
 
 class CifarResNet(nn.Module):
