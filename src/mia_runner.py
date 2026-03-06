@@ -115,7 +115,11 @@ class MIARunner:
         round_auc_by_attacker = {}  # victim_id -> {attacker_id: auc}
         
         for node in nodes:
+            node.model.to(device)
             round_global_test_accs[node.id] = float(evaluate(node.model, global_test_loader, device=device, top_k=eval_top_k))
+            node.model.to("cpu")
+            if "cuda" in device and torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         torch_state = torch.get_rng_state()
         np_state = np.random.get_state()

@@ -53,6 +53,14 @@ class Node:
         self.privacy_engine = pe
         self.dp_delta = float(delta)
 
+    def move_to_device(self, device: str) -> None:
+        """Move model and optimizer state to device (for streaming: only one node on GPU at a time)."""
+        self.model.to(device)
+        for state in self.optimizer.state.values():
+            for k, v in state.items():
+                if torch.is_tensor(v):
+                    state[k] = v.to(device)
+
     def get_epsilon(self):
         if self.privacy_engine is None:
             return None

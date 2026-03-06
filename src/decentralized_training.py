@@ -38,14 +38,24 @@ def create_nodes(settings, dataloaders, topology, model_fn):
             )
         nodes.append(node)
 
+    # Keep only one model on GPU at a time (streaming): store all on CPU by default.
+    for n in nodes:
+        n.move_to_device("cpu")
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     return nodes
 
 def local_training_phase(nodes, learning_settings, device: str) -> None:
     for node in nodes:
+        node.move_to_device(device)
         node.local_train(
             local_epochs=learning_settings.local_epochs,
             device=device,
         )
+        node.move_to_device("cpu")
+        if "cuda" in device and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 def communication_phase_chunked(nodes, seed: int, round_nr: int, enable_chunking: bool, chunks_per_neighbor: int = 1):
     """
@@ -85,7 +95,11 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
     do_eval = settings.enable_evaluation and ((round_nr + 1) % settings.eval_interval == 0)
     acc_before = acc_after = None
     if do_eval:
+        nodes[0].move_to_device(device)
         acc_before = evaluate(nodes[0].model, global_test_loader, device=device, top_k=settings.eval_top_k)
+        nodes[0].move_to_device("cpu")
+        if "cuda" in device and torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     # Save training RNG state 
     torch_state = torch.get_rng_state()
@@ -139,7 +153,11 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
 
     # 5) Eval after averaging
     if do_eval:
+        nodes[0].move_to_device(device)
         acc_after = evaluate(nodes[0].model, global_test_loader, device=device, top_k=settings.eval_top_k)
+        nodes[0].move_to_device("cpu")
+        if "cuda" in device and torch.cuda.is_available():
+            torch.cuda.empty_cache()
         print("before: " + str(acc_before))
         print("after: " + str(acc_after))
         print("----")
