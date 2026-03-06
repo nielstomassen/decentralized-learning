@@ -6,9 +6,10 @@
 #   pip install -r requirements.txt
 # See VM_SETUP.md for full instructions.
 
-# Core (pinned for reproducibility)
-torch>=2.0,<2.4
-torchvision>=0.15,<0.19
+# Core (pinned for reproducibility). Keep upper bounds loose so a GPU install
+# (e.g. torch 2.6+cu124 from PyTorch index) is not replaced by pip install -r requirements.txt.
+torch>=2.0,<2.7
+torchvision>=0.15,<0.22
 numpy>=1.24,<2
 matplotlib>=3.6
 scipy>=1.10
