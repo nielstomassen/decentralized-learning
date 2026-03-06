@@ -1,13 +1,24 @@
-# core dependencies
-torch
-torchvision
-numpy
-matplotlib
-scipy
-scikit-learn
-opacus
-pandas
-networkx
-dataclasses-json
+# Reproducible dependencies for hybrid_ablation and experiments.
+# Python 3.9+ recommended.
+#
+# GPU VM: Install PyTorch with CUDA first, then install this file:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#   pip install -r requirements.txt
+# See VM_SETUP.md for full instructions.
 
+# Core (pinned for reproducibility)
+torch>=2.0,<2.4
+torchvision>=0.15,<0.19
+numpy>=1.24,<2
+matplotlib>=3.6
+scipy>=1.10
+scikit-learn>=1.2
+pandas>=2.0
+networkx>=3.0
+dataclasses-json>=0.6
+
+# DP training
+opacus>=1.4
+
+# MIA attacks (external)
 mia_attacks @ git+https://github.com/nielstomassen/mia_attacks.git

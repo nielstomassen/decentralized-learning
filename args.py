@@ -28,6 +28,7 @@ def get_args():
     parser.add_argument('--eval-top-k', type=int, default=1, dest='eval_top_k', help='Count a prediction as correct if the true class is in the top-k predicted classes (default: 1, i.e. top-1 accuracy).')
     parser.add_argument('--validation-batch-size', type=int, default=256, help='Batch size used during evaluation.')
     parser.add_argument('--time-rounds', dest='time_rounds', action='store_true', help='Measure and print the duration of each training round.')
+    parser.add_argument('--device', type=str, default=None, help='Device for training (e.g. cuda:0, cpu). If not set, auto-detects CUDA/MPS/CPU.')
     parser.add_argument('--partitioner', type=str, default="iid", choices=["iid", "dirichlet"], help="Data partitioning strategy used.")
     parser.add_argument('--alpha', type=float, default=0.1, help="Alpha used for dirichlet partitioning. Smaller alpha -> more skew; larger alpha -> closer to iid.")
     parser.add_argument('--no-samples', type=int, default=2000, help="Number of images to sample per node for dirichlet partitioning.")

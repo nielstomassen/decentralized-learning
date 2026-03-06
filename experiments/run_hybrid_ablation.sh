@@ -5,14 +5,19 @@
 set -e
 cd "$(dirname "$0")/.."
 
-ROUNDS=${ROUNDS:-30}
+ROUNDS=${ROUNDS:-60}
 PEERS=${PEERS:-100}
 # Space-separated list of seeds (each condition is run once per seed)
 SEEDS="${SEEDS:-4235}"
 # Space-separated list of ER graph p values to sweep
 ER_PS="${ER_PS:-0.08}"
 DP_NOISE=${DP_NOISE:-0.5}
-RESULTS_ROOT=${RESULTS_ROOT:-results/emnist/hybrid_ablation}
+RESULTS_ROOT=${RESULTS_ROOT:-results/cifar100/hybrid_ablation}
+# GPU-friendly: larger batch (e.g. 32 or 64), set TIMING=1 to time rounds, DEVICE=cuda:0 to force GPU
+BATCH_SIZE=${BATCH_SIZE:-16}
+EXTRA_ARGS=()
+[[ -n "${TIMING:-}" ]] && [[ "${TIMING}" != "0" ]] && EXTRA_ARGS+=(--time-rounds)
+[[ -n "${DEVICE:-}" ]] && EXTRA_ARGS+=(--device "$DEVICE")
 
 # Base args without --seed or --er-p (we pass those per run)
 BASE_ARGS=(
@@ -20,25 +25,26 @@ BASE_ARGS=(
   --peers "$PEERS"
   --topology "er"
   --beta 0.7
-  --model "cnn"
-  --dataset "emnist"
+  --model "resnet56"
+  --dataset "cifar100"
   --local-epochs 5
   --mia-attack "baseline"
-  --mia-interval 30
-  --batch-size 16
+  --mia-interval 60
+  --batch-size "$BATCH_SIZE"
   --mia-baseline-type "loss"
-  --partitioner "dirichlet"
+  --partitioner "iid"
   --alpha 0.3
   --weight-decay 0
   --message-type "full"
   --mia-measurement-number 1000
-  --no-samples 500
-  --eval-top-k 1
+  --no-samples 1000
+  --eval-top-k 5
+  "${EXTRA_ARGS[@]}"
 )
 
 echo "=== Hybrid ablation: 2×2 (DP × chunk) over ER p values and seeds ==="
-echo "  RESULTS_ROOT=$RESULTS_ROOT  ROUNDS=$ROUNDS  PEERS=$PEERS  DP_NOISE=$DP_NOISE"
-echo "  ER_PS=$ER_PS  SEEDS=$SEEDS"
+echo "  RESULTS_ROOT=$RESULTS_ROOT  ROUNDS=$ROUNDS  PEERS=$PEERS  DP_NOISE=$DP_NOISE  BATCH_SIZE=$BATCH_SIZE"
+echo "  ER_PS=$ER_PS  SEEDS=$SEEDS  TIMING=${TIMING:-0}  DEVICE=${DEVICE:-auto}"
 echo ""
 
 for er_p in $ER_PS; do

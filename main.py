@@ -73,7 +73,7 @@ def build_settings():
         eval_top_k=args.eval_top_k,
         validation_batch_size=args.validation_batch_size,
         time_rounds=args.time_rounds,
-        torch_device_name=get_torch_device(),
+        torch_device_name=args.device if args.device else get_torch_device(),
     )
     
     return settings, learning_settings, mia_settings, topology_settings

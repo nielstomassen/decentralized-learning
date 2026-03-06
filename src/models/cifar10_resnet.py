@@ -77,8 +77,16 @@ class CifarResNet(nn.Module):
         x = self.feature(x)
         return self.fc(x)
 
+def resnet20_cifar_gn(num_classes=10, gn_groups=8):
+    """ResNet-20 (n=3 blocks per stage). Lighter, faster."""
+    return CifarResNet(num_classes=num_classes, n=3, norm="gn", gn_groups=gn_groups)
+
 def resnet32_cifar_gn(num_classes=10, gn_groups=8):
     return CifarResNet(num_classes=num_classes, n=5, norm="gn", gn_groups=gn_groups)
+
+def resnet56_cifar_gn(num_classes=10, gn_groups=8):
+    """ResNet-56 (n=9 blocks per stage). Deeper, better accuracy."""
+    return CifarResNet(num_classes=num_classes, n=9, norm="gn", gn_groups=gn_groups)
 
 def resnet32_cifar_bn(num_classes=10):
     return CifarResNet(num_classes=num_classes, n=5, norm="bn")

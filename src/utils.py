@@ -1,14 +1,22 @@
+import os
 import torch
 import numpy as np
 import random
 
 def set_global_seed(seed: int = 42):
+    _enable_cudnn_benchmark()
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     # torch.backends.cudnn.deterministic = True
     # torch.backends.cudnn.benchmark = False
+
+
+def _enable_cudnn_benchmark():
+    """Enable cuDNN benchmark for faster GPU training (slight non-determinism). Set env CUDA_BENCHMARK=1 to enable."""
+    if torch.cuda.is_available() and os.environ.get("CUDA_BENCHMARK", "").strip() in ("1", "true", "yes"):
+        torch.backends.cudnn.benchmark = True
 
 def get_torch_device() -> str:
     # return "mps" if torch.backends.mps.is_available() else "cpu"

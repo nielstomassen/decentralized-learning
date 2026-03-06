@@ -4,7 +4,7 @@ from .mnist_logreg import MnistLogReg
 from .mnist_cnn import MnistCNN
 from .cifar10_cnn import Cifar10CNN
 from .cifar10_logreg import Cifar10LogReg
-from .cifar10_resnet import resnet32_cifar_gn
+from .cifar10_resnet import resnet20_cifar_gn, resnet32_cifar_gn, resnet56_cifar_gn
 
 class ModelFactory:
     @staticmethod
@@ -45,13 +45,23 @@ class ModelFactory:
             else:
                 raise ValueError(f"CNN not supported for dataset: {dataset_name}")
 
-        # --- ResNet ---
-        if mt in ("resnet", "resnet32"):
-            if ds in ("cifar10", "cifar"):
+        # --- ResNet (CIFAR-10 / CIFAR-100, 32x32 RGB) ---
+        if mt in ("resnet", "resnet20", "resnet32", "resnet56"):
+            if ds not in ("cifar10", "cifar", "cifar100"):
+                raise ValueError(f"ResNet only supported for cifar10/cifar100, got dataset={dataset_name}")
+            num_classes = 100 if ds == "cifar100" else 10
+            if mt == "resnet20":
                 def model_fn():
-                    return resnet32_cifar_gn(num_classes=10, gn_groups=8)
+                    return resnet20_cifar_gn(num_classes=num_classes, gn_groups=8)
                 return model_fn
-
+            if mt == "resnet56":
+                def model_fn():
+                    return resnet56_cifar_gn(num_classes=num_classes, gn_groups=8)
+                return model_fn
+            # resnet or resnet32
+            def model_fn():
+                return resnet32_cifar_gn(num_classes=num_classes, gn_groups=8)
+            return model_fn
 
         # --- Logistic Regression  ---
         if mt in ("logreg", "logistic", "logistic_regression"):
