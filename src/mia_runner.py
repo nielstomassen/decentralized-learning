@@ -1,6 +1,7 @@
 # src/mia_runner.py
 
 import csv
+import gc
 import os
 import random
 
@@ -61,6 +62,7 @@ class MIARunner:
         message_type,
         sent_messages: dict,
         attackers_for_victim: dict,  # victim_id -> list[attacker_id]
+        eval_top_k: int = 1,
     ):
         cfg = self.config
         if cfg.attack_type == "none":
@@ -113,7 +115,7 @@ class MIARunner:
         round_auc_by_attacker = {}  # victim_id -> {attacker_id: auc}
         
         for node in nodes:
-            round_global_test_accs[node.id] = float(evaluate(node.model, global_test_loader, device=device))
+            round_global_test_accs[node.id] = float(evaluate(node.model, global_test_loader, device=device, top_k=eval_top_k))
 
         torch_state = torch.get_rng_state()
         np_state = np.random.get_state()
@@ -348,6 +350,10 @@ class MIARunner:
             f"[MIA-Baseline] Round {round_nr + 1}: "
             f"attacker {attacker_id} -> victim {victim_id}, AUC={result['auc']:.4f}"
         )
+        del proxy_model
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         return result
 
     def _run_lira_on_victim(
@@ -402,17 +408,27 @@ class MIARunner:
             f"[MIA-LIRA] Round {round_nr + 1}: "
             f"attacker {attacker_id} -> victim {victim_id}, AUC={result['auc']:.4f}"
         )
+        del proxy_model
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         return result
 
     def save_csv(self, settings: SessionSettings):
         """
         Save recorded metrics to a CSV file.
+        Filename and CSV include enable_dp, enable_chunking, dp_noise for hybrid ablation analysis.
         """
+        dp_tag = "dp1" if settings.enable_dp else "dp0"
+        chunk_tag = "chunk1" if settings.enable_chunking else "chunk0"
+        cpn_tag = f"cpn{getattr(settings, 'chunks_per_neighbor', 1)}" if settings.enable_chunking else "cpn1"
+        noise_tag = f"noise{settings.dp_noise_multiplier}" if settings.enable_dp else "noise0"
         filename = (
             f"{settings.dataset}_{settings.model}_{settings.topology.topology_name}_{settings.topology.er_p}_"
             f"alpha{settings.alpha}_"
             f"beta{settings.beta}_"
             f"message{settings.message_type}_"
+            f"{dp_tag}_{chunk_tag}_{cpn_tag}_{noise_tag}_"
             f"seed{settings.seed}.csv"
         )
         filepath = os.path.join(self.config.mia_results_root, filename)
@@ -443,6 +459,10 @@ class MIARunner:
                     "avg_chunk_frac",
                     "max_chunk_frac",
                     "argmax_chunk_attacker",
+                    "enable_dp",
+                    "enable_chunking",
+                    "chunks_per_neighbor",
+                    "dp_noise",
                 ]
             )
 
@@ -493,6 +513,10 @@ class MIARunner:
                             avg_cf_r.get(node_id),
                             max_cf_r.get(node_id),
                             argmax_cf_att_r.get(node_id),
+                            int(settings.enable_dp),
+                            int(settings.enable_chunking),
+                            getattr(settings, "chunks_per_neighbor", 1),
+                            settings.dp_noise_multiplier if settings.enable_dp else 0.0,
                         ]
                     )
 

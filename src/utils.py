@@ -19,8 +19,9 @@ def get_torch_device() -> str:
     else:
         return "cpu"
 
-def evaluate(model, dataloader, device="cpu"):
-    """Evaluate a model on a given dataloader and return accuracy in [0, 1]."""
+def evaluate(model, dataloader, device="cpu", top_k=1):
+    """Evaluate a model on a given dataloader and return accuracy in [0, 1].
+    A prediction is correct if the true class is in the top-k predicted classes (default top-1)."""
     model.to(device)
     model.eval()
     correct = 0
@@ -30,8 +31,13 @@ def evaluate(model, dataloader, device="cpu"):
         for x, y in dataloader:
             x, y = x.to(device), y.to(device)
             logits = model(x)
-            preds = torch.argmax(logits, dim=1)
-            correct += (preds == y).sum().item()
+            k = min(top_k, logits.size(1))
+            if k == 1:
+                preds = torch.argmax(logits, dim=1)
+                correct += (preds == y).sum().item()
+            else:
+                _, topk_preds = torch.topk(logits, k, dim=1)
+                correct += (topk_preds == y.unsqueeze(1)).any(dim=1).sum().item()
             total += y.size(0)
 
     return correct / total if total > 0 else 0.0

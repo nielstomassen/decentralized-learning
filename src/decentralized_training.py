@@ -24,11 +24,13 @@ def create_nodes(settings, dataloaders, topology, model_fn):
         )
         if getattr(settings, "enable_dp", False):
             d = max(1, len(node.neighbors))
-            d0 = getattr(settings, "dp_ref_degree", 4)  # average degree (normal noise)
-            scale = (d0 / d) ** 0.5
-
-            sigma = settings.dp_noise_multiplier # * scale
-            sigma = min(sigma, getattr(settings, "dp_sigma_cap", 10.0))  
+            # d0 = getattr(settings, "dp_ref_degree", 1)  
+            sigma = settings.dp_noise_multiplier
+            if settings.enable_chunking:
+                scale = min(1.0, 1 / d)  
+                sigma = sigma * scale
+                sigma = max(sigma, getattr(settings, "dp_sigma_min", 0.01))  # floor to avoid Opacus accountant overflow
+            sigma = min(sigma, getattr(settings, "dp_sigma_cap", 10.0))
             node.enable_dp_training(
                 noise_multiplier=sigma,
                 max_grad_norm=settings.dp_max_grad_norm,
@@ -45,7 +47,7 @@ def local_training_phase(nodes, learning_settings, device: str) -> None:
             device=device,
         )
 
-def communication_phase_chunked(nodes, seed: int, round_nr: int, enable_chunking: bool):
+def communication_phase_chunked(nodes, seed: int, round_nr: int, enable_chunking: bool, chunks_per_neighbor: int = 1):
     """
     Build chunked messages, deliver them, and return them.
 
@@ -57,7 +59,7 @@ def communication_phase_chunked(nodes, seed: int, round_nr: int, enable_chunking
     for sender in nodes:
         # Deterministic per (seed, round, sender)
         s = seed * 10_000_000 + round_nr * 10_000 + sender.id
-        sent[sender.id] = sender.prepare_messages_for_neighbors_rowblocks(seed=s, enable_chunking=enable_chunking)
+        sent[sender.id] = sender.prepare_messages_for_neighbors_rowblocks(seed=s, enable_chunking=enable_chunking, chunks_per_neighbor=chunks_per_neighbor)
 
     # Deliver exactly what was sent
     for receiver in nodes:
@@ -83,7 +85,7 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
     do_eval = settings.enable_evaluation and ((round_nr + 1) % settings.eval_interval == 0)
     acc_before = acc_after = None
     if do_eval:
-        acc_before = evaluate(nodes[0].model, global_test_loader, device=device)
+        acc_before = evaluate(nodes[0].model, global_test_loader, device=device, top_k=settings.eval_top_k)
 
     # Save training RNG state 
     torch_state = torch.get_rng_state()
@@ -92,7 +94,7 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
 
     
     # 2) Build + deliver chunked messages ONCE
-    sent = communication_phase_chunked(nodes, seed=settings.seed, round_nr=round_nr, enable_chunking=settings.enable_chunking)
+    sent = communication_phase_chunked(nodes, seed=settings.seed, round_nr=round_nr, enable_chunking=settings.enable_chunking, chunks_per_neighbor=settings.chunks_per_neighbor)
 
     # 3) Run MIA using the SAME sent messages (attacker-view)
     if mia_runner is not None:
@@ -124,6 +126,7 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
             sent_messages=sent,
             attackers_for_victim=attackers_for_victim,
             global_test_loader=global_test_loader,
+            eval_top_k=settings.eval_top_k,
         )
 
     # Restore training RNG state
@@ -136,7 +139,7 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
 
     # 5) Eval after averaging
     if do_eval:
-        acc_after = evaluate(nodes[0].model, global_test_loader, device=device)
+        acc_after = evaluate(nodes[0].model, global_test_loader, device=device, top_k=settings.eval_top_k)
         print("before: " + str(acc_before))
         print("after: " + str(acc_after))
         print("----")

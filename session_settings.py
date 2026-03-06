@@ -75,8 +75,10 @@ class SessionSettings:
     dp_max_grad_norm: float
     dp_delta: float
     enable_chunking: bool
+    chunks_per_neighbor: int
     enable_evaluation: bool 
     eval_interval: int  
+    eval_top_k: int
     validation_batch_size: int
     time_rounds: bool
     torch_device_name: str 

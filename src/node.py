@@ -21,9 +21,10 @@ class Node:
 
         self.neighbors = list(neighbors)  # list[int]
         self.neighbor_weights = dict(neighbor_weights)  # dict[int -> float]
-
+        
         self.beta = float(settings.beta)
         self.message_type = settings.message_type  # "full" or "delta"
+        self.enable_chunking = getattr(settings, "enable_chunking", False)
         self._state_before_local = None
 
         self.optimizer = torch.optim.SGD(
@@ -55,7 +56,20 @@ class Node:
     def get_epsilon(self):
         if self.privacy_engine is None:
             return None
-        return float(self.privacy_engine.get_epsilon(delta=self.dp_delta))
+        if self.enable_chunking:
+            return None
+        try:
+            return float(self.privacy_engine.get_epsilon(delta=self.dp_delta))
+        except (MemoryError, OverflowError, ValueError) as e:
+            # PRV accountant can allocate huge arrays or overflow for extreme (sigma, steps) combinations
+            import warnings
+            warnings.warn(
+                f"get_epsilon() failed ({type(e).__name__}), returning None. "
+                "Training is unchanged; only epsilon reporting is skipped.",
+                UserWarning,
+                stacklevel=2,
+            )
+            return None
 
     def local_train(self, local_epochs=1, device="cpu"): 
         if self.message_type == "delta":
@@ -135,6 +149,7 @@ class Node:
         split_threshold_numel: int = 1,
         broadcast_unsplittable: bool = False,
         enable_chunking: bool = False,
+        chunks_per_neighbor: int = 1,
     ) -> dict[int, dict]:
         """
         BALANCED row-block messages:
@@ -142,8 +157,8 @@ class Node:
         - For splittable tensors:
             split into d row-blocks (d = sender degree),
             shuffle blocks deterministically with seed,
-            send EXACTLY one block to each neighbor.
-            each neighbor sees approximately 1/d of those tensors every round.
+            then assign so each neighbor receives chunks_per_neighbor chunks (sliding window).
+            Same d chunks total; duplication improves utility. Default 1 = one chunk per neighbor.
 
         - For unsplittable tensors:
             if broadcast_unsplittable=True: send to all neighbors
@@ -181,9 +196,12 @@ class Node:
                 blocks = self._split_rows(t, d)  # exactly d blocks
                 rng.shuffle(blocks)              # random permutation per round (deterministic given seed)
 
-                for nb, (s, e, chunk) in zip(nbs, blocks):
-                    v = chunk
-                    out[nb]["parts"].append({"k": k, "start": int(s), "end": int(e), "v": v.detach().clone()})
+                K = max(1, min(chunks_per_neighbor, d))  # each neighbor gets K of the d chunks (sliding window)
+                for j, nb in enumerate(nbs):
+                    for offset in range(K):
+                        idx = (j + offset) % d
+                        s, e, chunk = blocks[idx]
+                        out[nb]["parts"].append({"k": k, "start": int(s), "end": int(e), "v": chunk.detach().clone()})
 
             else:
                 part_v = t
