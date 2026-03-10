@@ -230,7 +230,7 @@ def main():
     ax2.set_ylabel(f"Mean MIA {args.auc_col} (leakage)")
     ax2.set_xticks(x)
     ax2.set_xticklabels(by_cond["condition"], rotation=15, ha="right")
-    ax2.set_ylim(0.5, 0.8)
+    ax2.set_ylim(0.4, 1)
     ax2.set_yscale(args.yscale)
     ax2.legend()
 
@@ -265,7 +265,7 @@ def main():
     ax.set_title(f"Privacy–utility tradeoff (mean over {n_seeds} seeds; ideal: high accuracy, low AUC)")
     ax.legend(loc="best", fontsize=8)
     ax.set_xlim(xmin, xmax)
-    ax.set_ylim(0.5, 0.8)
+    ax.set_ylim(0.1, 1)
     ax.set_xscale(args.xscale)
     ax.set_yscale(args.yscale)
     ax.grid(True, alpha=0.3)

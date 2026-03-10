@@ -68,7 +68,7 @@ class Node:
             return None
         try:
             return float(self.privacy_engine.get_epsilon(delta=self.dp_delta))
-        except (MemoryError, OverflowError, ValueError) as e:
+        except Exception as e:
             # PRV accountant can allocate huge arrays or overflow for extreme (sigma, steps) combinations
             import warnings
             warnings.warn(

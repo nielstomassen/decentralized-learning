@@ -4,8 +4,12 @@
 
 set -e
 cd "$(dirname "$0")/.."
+LOG_DIR=${LOG_DIR:-logs}
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/hybrid_ablation_$(date +%Y%m%d_%H%M%S).log"
 
-ROUNDS=${ROUNDS:-60}
+exec > >(tee -a "$LOG_FILE") 2>&1
+ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
 # Space-separated list of seeds (each condition is run once per seed)
 SEEDS="${SEEDS:-4235}"
@@ -24,12 +28,12 @@ BASE_ARGS=(
   --rounds "$ROUNDS"
   --peers "$PEERS"
   --topology "er"
-  --beta 0.7
-  --model "resnet56"
+  --beta 0.5
+  --model "cnn"
   --dataset "cifar100"
   --local-epochs 5
   --mia-attack "baseline"
-  --mia-interval 60
+  --mia-interval 100
   --batch-size "$BATCH_SIZE"
   --mia-baseline-type "loss"
   --partitioner "iid"
@@ -55,22 +59,22 @@ for er_p in $ER_PS; do
   for seed in $SEEDS; do
     # 1) No DP, no chunk (baseline)
     echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  seed=$seed"
-    python3 main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
+    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
     echo ""
 
     # 2) DP only
     echo "[2/4] DP only  er_p=$er_p  seed=$seed"
-    python3 main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE"
+    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" || { echo "ERROR: [2/4] DP-only run failed with exit code $?"; exit 1; }
     echo ""
 
     # 3) Chunk only
     echo "[3/4] Chunk only  er_p=$er_p  seed=$seed"
-    python3 main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --chunk
+    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --chunk
     echo ""
 
     # 4) DP + chunk (hybrid)
     echo "[4/4] DP + chunk (hybrid)  er_p=$er_p  seed=$seed"
-    python3 main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" --chunk
+    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" --chunk
     echo ""
   done
 done

@@ -1,4 +1,6 @@
 import os
+import sys
+import traceback
 import torch
 from src.mia_runner import MIARunner
 from src.plots import draw_topology, plot_mia_curves
@@ -114,32 +116,52 @@ def run():
     nodes = create_nodes(settings, dataloaders, topology, model_fn)
     
     # 4. Training loop
-    for rnd in range(settings.rounds):
-        if(settings.time_rounds):
-            start = time.perf_counter()
-        run_round(
-            round_nr=rnd,
-            topology=topology,
-            nodes=nodes,
-            settings=settings,
-            test_loaders=test_loaders,
-            device=settings.torch_device_name,
-            dataloaders=dataloaders,
-            model_fn=model_fn,
-            mia_runner=mia_runner,
-            global_test_loader=global_test_loader
-        )
-        if(settings.time_rounds):
-            # Make sure all GPU work is finished before stopping the timer
-            if "cuda" in settings.torch_device_name and torch.cuda.is_available():
-                torch.cuda.synchronize() 
-            end = time.perf_counter()
-            duration = end - start
-            print(f"The round took {duration:.3f} seconds")
-    
-    # plot_mia_curves(mia_runner, settings)
-    mia_runner.save_csv(settings=settings)
+    try:
+        for rnd in range(settings.rounds):
+            if(settings.time_rounds):
+                start = time.perf_counter()
+            run_round(
+                round_nr=rnd,
+                topology=topology,
+                nodes=nodes,
+                settings=settings,
+                test_loaders=test_loaders,
+                device=settings.torch_device_name,
+                dataloaders=dataloaders,
+                model_fn=model_fn,
+                mia_runner=mia_runner,
+                global_test_loader=global_test_loader
+            )
+            if(settings.time_rounds):
+                # Make sure all GPU work is finished before stopping the timer
+                if "cuda" in settings.torch_device_name and torch.cuda.is_available():
+                    torch.cuda.synchronize()
+                end = time.perf_counter()
+                duration = end - start
+                print(f"The round took {duration:.3f} seconds")
 
- 
+        if mia_runner is not None:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            print("[MIA] Training complete. Saving results to CSV...", flush=True)
+            mia_runner.save_csv(settings=settings)
+    except Exception as e:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        traceback.print_exc()
+        raise
+    finally:
+        # Attempt to save partial results if we crashed during MIA
+        if mia_runner is not None and len(getattr(mia_runner, "global_test_accs", [])) > 0:
+            try:
+                sys.stdout.flush()
+                sys.stderr.flush()
+                print("[MIA] Saving partial results to CSV...", flush=True)
+                mia_runner.save_csv(settings=settings)
+            except Exception as save_err:
+                print(f"[MIA] Failed to save partial CSV: {save_err}", flush=True)
+                traceback.print_exc()
+
+
 if __name__ == "__main__":
     run()

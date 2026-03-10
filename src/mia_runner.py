@@ -4,6 +4,7 @@ import csv
 import gc
 import os
 import random
+import sys
 
 import numpy as np
 import torch
@@ -80,6 +81,10 @@ class MIARunner:
             self.argmax_chunk_attacker.append({})
             return None
 
+        print(f"[MIA] Running MIA for round {round_nr + 1}...", flush=True)
+        sys.stdout.flush()
+        sys.stderr.flush()
+
         G = topology.graph
         bg = G.to_undirected() if G.is_directed() else G
 
@@ -115,11 +120,18 @@ class MIARunner:
         round_auc_by_attacker = {}  # victim_id -> {attacker_id: auc}
         
         for node in nodes:
-            node.model.to(device)
-            round_global_test_accs[node.id] = float(evaluate(node.model, global_test_loader, device=device, top_k=eval_top_k))
-            node.model.to("cpu")
-            if "cuda" in device and torch.cuda.is_available():
-                torch.cuda.empty_cache()
+            try:
+                node.model.to(device)
+                round_global_test_accs[node.id] = float(evaluate(node.model, global_test_loader, device=device, top_k=eval_top_k))
+            except Exception as e:
+                print(f"[MIA] ERROR evaluating node {node.id} for round {round_nr + 1}: {e}", flush=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
+                raise
+            finally:
+                node.model.to("cpu")
+                if "cuda" in device and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
         torch_state = torch.get_rng_state()
         np_state = np.random.get_state()
@@ -163,19 +175,28 @@ class MIARunner:
                 torch.set_rng_state(torch_state)
                 np.random.set_state(np_state)
                 random.setstate(py_state)
-                result = self._run_attack_for_victim(
-                    round_nr=round_nr,
-                    victim_id=victim_id,
-                    attacker_id=attacker_id,
-                    pre_comm_states=pre_comm_states,
-                    victim_chunk_seen=victim_chunk_seen,
-                    dataloaders=dataloaders,
-                    test_loaders=test_loaders,
-                    model_fn=model_fn,
-                    device=device,
-                    nodes=nodes,
-                    message_type=message_type,
-                )
+                try:
+                    result = self._run_attack_for_victim(
+                        round_nr=round_nr,
+                        victim_id=victim_id,
+                        attacker_id=attacker_id,
+                        pre_comm_states=pre_comm_states,
+                        victim_chunk_seen=victim_chunk_seen,
+                        dataloaders=dataloaders,
+                        test_loaders=test_loaders,
+                        model_fn=model_fn,
+                        device=device,
+                        nodes=nodes,
+                        message_type=message_type,
+                    )
+                except Exception as e:
+                    print(
+                        f"[MIA] ERROR attacker {attacker_id} -> victim {victim_id} round {round_nr + 1}: {e}",
+                        flush=True,
+                    )
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    continue
                 auc = result.get("auc")
                 if auc is None:
                     continue
