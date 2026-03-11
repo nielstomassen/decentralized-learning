@@ -64,7 +64,7 @@ class Node:
     def get_epsilon(self):
         if self.privacy_engine is None:
             return None
-        if self.enable_chunking:
+        if True:
             return None
         try:
             return float(self.privacy_engine.get_epsilon(delta=self.dp_delta))
