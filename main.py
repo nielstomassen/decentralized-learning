@@ -68,6 +68,7 @@ def build_settings():
         dp_noise_multiplier=args.dp_noise_multiplier,
         dp_max_grad_norm=args.dp_max_grad_norm,
         dp_delta=args.dp_delta,
+        dp_logical_batch_size=args.dp_logical_batch_size,
         enable_chunking=args.enable_chunking,
         chunks_per_neighbor=args.chunks_per_neighbor,
         enable_evaluation=args.enable_evaluation,

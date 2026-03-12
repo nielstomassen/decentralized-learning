@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 from dataclasses_json import dataclass_json
+from typing import Optional
 import json
 
 @dataclass
@@ -81,7 +82,8 @@ class SessionSettings:
     eval_top_k: int
     validation_batch_size: int
     time_rounds: bool
-    torch_device_name: str 
+    torch_device_name: str
+    dp_logical_batch_size: Optional[int] = None  # If > batch_size, use Opacus BatchMemoryManager 
 
     def __str__(self):
         return json.dumps(asdict(self), indent=4)

@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--dp-noise', dest='dp_noise_multiplier', type=float, default=1.0, help='Noise multiplier (sigma) for DP-SGD.')
     parser.add_argument('--dp-clip', dest='dp_max_grad_norm', type=float, default=1.0, help='Max per-sample gradient norm for DP-SGD.')
     parser.add_argument('--dp-delta', dest='dp_delta', type=float, default=1e-5, help='Target delta for DP accounting.')
+    parser.add_argument('--dp-logical-batch-size', dest='dp_logical_batch_size', type=int, default=None, help='When set and > batch-size, use Opacus BatchMemoryManager so DP accountant sees this logical batch size while physical batch size stays at batch-size (saves GPU memory).')
     parser.add_argument('--chunk', dest='enable_chunking', action='store_true', help='Enable chunking when communicating model updates with other nodes.')
     parser.add_argument('--chunks-per-neighbor', type=int, default=1, dest='chunks_per_neighbor', help='When chunking is enabled: number of chunks each neighbor receives (default 1). Still d chunks total; each is sent to this many neighbors via sliding window to improve utility.')
     parser.add_argument('--eval', dest='enable_evaluation', action='store_true', help='Enable evaluation during training (default: disabled).')

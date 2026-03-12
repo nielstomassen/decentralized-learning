@@ -1,8 +1,12 @@
 import copy
 import random
+from typing import Optional
+
 import torch
 import math
+from torch.utils.data import DataLoader
 from opacus import PrivacyEngine
+from opacus.utils.batch_memory_manager import BatchMemoryManager
 
 
 
@@ -40,18 +44,48 @@ class Node:
         self._buffer_neighbor_models: dict[int, dict] = {}
         self.model.load_state_dict(global_init)
 
-    def enable_dp_training(self, noise_multiplier: float, max_grad_norm: float, delta: float = 1e-5):
+    def enable_dp_training(
+        self,
+        noise_multiplier: float,
+        max_grad_norm: float,
+        delta: float = 1e-5,
+        physical_batch_size: Optional[int] = None,
+        logical_batch_size: Optional[int] = None,
+    ):
+        use_memory_manager = (
+            logical_batch_size is not None
+            and physical_batch_size is not None
+            and logical_batch_size > physical_batch_size
+        )
+        if use_memory_manager:
+            old_loader = self.dataloader
+            logical_loader = DataLoader(
+                old_loader.dataset,
+                batch_size=logical_batch_size,
+                shuffle=True,
+                drop_last=old_loader.drop_last,
+                num_workers=old_loader.num_workers,
+                collate_fn=old_loader.collate_fn,
+            )
+            data_loader_for_dp = logical_loader
+        else:
+            data_loader_for_dp = self.dataloader
+
         pe = PrivacyEngine(secure_mode=False)
         self.model, self.optimizer, self.dataloader = pe.make_private(
             module=self.model,
             optimizer=self.optimizer,
-            data_loader=self.dataloader,
+            data_loader=data_loader_for_dp,
             noise_multiplier=float(noise_multiplier),
             max_grad_norm=float(max_grad_norm),
-            poisson_sampling=False, # For faster speed, turn to True for final experiment
+            poisson_sampling=False,
         )
         self.privacy_engine = pe
         self.dp_delta = float(delta)
+        if use_memory_manager:
+            self._dp_physical_batch_size = physical_batch_size
+        else:
+            self._dp_physical_batch_size = None
 
     def move_to_device(self, device: str) -> None:
         """Move model and optimizer state to device (for streaming: only one node on GPU at a time)."""
@@ -79,7 +113,7 @@ class Node:
             )
             return None
 
-    def local_train(self, local_epochs=1, device="cpu"): 
+    def local_train(self, local_epochs=1, device="cpu"):
         if self.message_type == "delta":
             sd = self.model.state_dict()
             # Save stated before training to compute delta: state after training - state before training
@@ -89,6 +123,24 @@ class Node:
 
         self.model.train()
 
+        physical_batch = getattr(self, "_dp_physical_batch_size", None)
+        if self.privacy_engine is not None and physical_batch is not None:
+            # Opacus BatchMemoryManager: iterate in small physical batches, optimizer steps on logical batch
+            for _ in range(local_epochs):
+                with BatchMemoryManager(
+                    data_loader=self.dataloader,
+                    max_physical_batch_size=physical_batch,
+                    optimizer=self.optimizer,
+                ) as new_data_loader:
+                    for x, y in new_data_loader:
+                        x, y = x.to(device), y.to(device)
+                        self.optimizer.zero_grad()
+                        logits = self.model(x)
+                        loss = torch.nn.functional.cross_entropy(logits, y)
+                        loss.backward()
+                        self.optimizer.step()
+            return
+
         data_iter = iter(self.dataloader)
         num_batches = len(self.dataloader)
         total_steps = local_epochs * num_batches
@@ -97,7 +149,6 @@ class Node:
             try:
                 x, y = next(data_iter)
             except StopIteration:
-                # Next pass over the data
                 data_iter = iter(self.dataloader)
                 x, y = next(data_iter)
 

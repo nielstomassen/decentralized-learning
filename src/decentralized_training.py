@@ -35,6 +35,8 @@ def create_nodes(settings, dataloaders, topology, model_fn):
                 noise_multiplier=sigma,
                 max_grad_norm=settings.dp_max_grad_norm,
                 delta=getattr(settings, "dp_delta", 1e-5),
+                physical_batch_size=settings.learning.batch_size,
+                logical_batch_size=getattr(settings, "dp_logical_batch_size", None),
             )
         nodes.append(node)
 
