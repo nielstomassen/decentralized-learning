@@ -17,8 +17,9 @@ SEEDS="${SEEDS:-4235}"
 ER_PS="${ER_PS:-0.08}"
 DP_NOISE=${DP_NOISE:-0.5}
 RESULTS_ROOT=${RESULTS_ROOT:-results/cifar100/hybrid_ablation}
-# GPU-friendly: larger batch (e.g. 32 or 64), set TIMING=1 to time rounds, DEVICE=cuda:0 to force GPU
-BATCH_SIZE=${BATCH_SIZE:-16}
+# GPU-friendly: BATCH_SIZE=12 fits small GPUs; set DP_LOGICAL_BATCH_SIZE=32 to use Opacus BatchMemoryManager (same memory, better DP utility)
+BATCH_SIZE=${BATCH_SIZE:-12}
+DP_LOGICAL_BATCH_SIZE=${DP_LOGICAL_BATCH_SIZE:-32}  # logical batch for accountant, physical stays BATCH_SIZE
 EXTRA_ARGS=()
 [[ -n "${TIMING:-}" ]] && [[ "${TIMING}" != "0" ]] && EXTRA_ARGS+=(--time-rounds)
 [[ -n "${DEVICE:-}" ]] && EXTRA_ARGS+=(--device "$DEVICE")
@@ -35,6 +36,7 @@ BASE_ARGS=(
   --mia-attack "baseline"
   --mia-interval 100
   --batch-size "$BATCH_SIZE"
+  ${DP_LOGICAL_BATCH_SIZE:+--dp-logical-batch-size "$DP_LOGICAL_BATCH_SIZE"}
   --mia-baseline-type "loss"
   --partitioner "iid"
   --alpha 0.3
@@ -58,9 +60,9 @@ for er_p in $ER_PS; do
 
   for seed in $SEEDS; do
     # 1) No DP, no chunk (baseline)
-    echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  seed=$seed"
-    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
-    echo ""
+    # echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  seed=$seed"
+    # python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
+    # echo ""
 
     # 2) DP only
     echo "[2/4] DP only  er_p=$er_p  seed=$seed"
