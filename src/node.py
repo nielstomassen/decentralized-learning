@@ -180,8 +180,8 @@ class Node:
         if self.message_type == "delta":
             if self._state_before_local is None:
                 raise RuntimeError("Delta message requested but no pre-local snapshot found.")
-            # State after training - state before training
-            return {k: (cur[k] - self._state_before_local[k]).detach().clone() for k in cur.keys()}
+            # State after training - state before training (align device: snapshot may be on GPU, cur on CPU after move_to_device)
+            return {k: (cur[k] - self._state_before_local[k].to(cur[k].device)).detach().clone() for k in cur.keys()}
 
         raise ValueError(f"Unknown message_type: {self.message_type}")
 
