@@ -448,12 +448,13 @@ class MIARunner:
         chunk_tag = "chunk1" if settings.enable_chunking else "chunk0"
         cpn_tag = f"cpn{getattr(settings, 'chunks_per_neighbor', 1)}" if settings.enable_chunking else "cpn1"
         noise_tag = f"noise{settings.dp_noise_multiplier}" if settings.enable_dp else "noise0"
+        clip_tag = f"clip{settings.dp_max_grad_norm}" if settings.enable_dp else "clip0"
         filename = (
             f"{settings.dataset}_{settings.model}_{settings.topology.topology_name}_{settings.topology.er_p}_"
             f"alpha{settings.alpha}_"
             f"beta{settings.beta}_"
             f"message{settings.message_type}_"
-            f"{dp_tag}_{chunk_tag}_{cpn_tag}_{noise_tag}_"
+            f"{dp_tag}_{chunk_tag}_{cpn_tag}_{noise_tag}_{clip_tag}_"
             f"seed{settings.seed}.csv"
         )
         filepath = os.path.join(self.config.mia_results_root, filename)
@@ -488,6 +489,7 @@ class MIARunner:
                     "enable_chunking",
                     "chunks_per_neighbor",
                     "dp_noise",
+                    "dp_max_grad_norm",
                 ]
             )
 
@@ -542,6 +544,7 @@ class MIARunner:
                             int(settings.enable_chunking),
                             getattr(settings, "chunks_per_neighbor", 1),
                             settings.dp_noise_multiplier if settings.enable_dp else 0.0,
+                            settings.dp_max_grad_norm if settings.enable_dp else 0.0,
                         ]
                     )
 
