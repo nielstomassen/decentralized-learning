@@ -2,8 +2,10 @@
 # Run hybrid privacy tradeoff + maxauc_vs_degree for a results folder.
 # Usage: ./scripts/plot_results_folder.sh <input_folder> <output_folder>
 #
-# - Hybrid plots go to <output_folder>/hybrid/
-# - Max-AUC plots: one subfolder per CSV under <output_folder>/max/<basename>/ 
+# - Hybrid plots go to <output_folder>/hybrid/ (conditions ordered by score u - λ*r when LAMBDA is set)
+# - Max-AUC plots: one subfolder per CSV under <output_folder>/max/<basename>/
+#
+# Env: LAMBDA (default 1) = weight for privacy risk in score. ORDER_BY_SCORE=1 (default) orders conditions by score u - λ*r; set to 0 for fixed order.
 
 set -e
 
@@ -11,11 +13,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INPUT_DIR="$1"
 OUT_DIR="$2"
+LAMBDA="${LAMBDA:-1}"
+ORDER_BY_SCORE="${ORDER_BY_SCORE:-1}"
 
 if [[ -z "$INPUT_DIR" || -z "$OUT_DIR" ]]; then
   echo "Usage: $0 <input_folder> <output_folder>"
   echo "  input_folder   e.g. results/a/er_p_0.08 (relative to project root)"
   echo "  output_folder e.g. plots/a (relative to project root)"
+  echo "  Optional env: LAMBDA (default 1), ORDER_BY_SCORE (default 1) orders by score u - λ*r; set 0 to disable"
   exit 1
 fi
 
@@ -29,12 +34,13 @@ mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
 # --- Hybrid privacy tradeoff → output_folder/hybrid/
+# Score = u - λ*r, r = max(0, 2*AUC-1); with ORDER_BY_SCORE=1 conditions are ordered by score (best first)
 HYBRID_OUT="${OUT_DIR}/hybrid"
 mkdir -p "$HYBRID_OUT"
-echo "Running hybrid_privacy_tradeoff.py -> $HYBRID_OUT"
-python3 src/plotting/hybrid_privacy_tradeoff.py \
-  --results-dir "$INPUT_DIR" \
-  --out-dir "$HYBRID_OUT"
+HYBRID_ARGS=(--results-dir "$INPUT_DIR" --out-dir "$HYBRID_OUT" --lambda "$LAMBDA")
+[[ "$ORDER_BY_SCORE" == "1" ]] && HYBRID_ARGS+=(--order-by-score)
+echo "Running hybrid_privacy_tradeoff.py -> $HYBRID_OUT (lambda=$LAMBDA, order_by_score=$ORDER_BY_SCORE)"
+python3 src/plotting/hybrid_privacy_tradeoff.py "${HYBRID_ARGS[@]}"
 
 # --- Max-AUC vs degree: one run per CSV → output_folder/max/<basename>/
 MAX_BASE="${OUT_DIR}/max"

@@ -4,12 +4,15 @@ Plot privacy–utility tradeoff for the 2×2 hybrid ablation (DP × chunk).
 
 Reads MIA result CSVs (with enable_dp, enable_chunking in filename or columns),
 groups by (enable_dp, enable_chunking), and plots:
-  - Mean test accuracy (utility) and mean MIA AUC (privacy leakage) per condition.
-  - Optional: scatter accuracy vs AUC to visualize tradeoff (high acc + low AUC = better).
+  - Bar chart: mean ± std test accuracy and MIA AUC per condition.
+  - Scatter: accuracy vs AUC (ideal: high acc, low AUC).
+  - Box plots: node-level accuracy and AUC by condition (fixed order), with mean ± std overlay.
+  - Score plot: bar chart of score = u - λ*r per condition, ordered by score (best first).
+  - Optional --order-by-score: order conditions by score = u - λ*r (r = max(0, 2*AUC-1)); --lambda sets λ.
 
 Usage:
   python hybrid_privacy_tradeoff.py --results-dir results/hybrid_ablation --out-dir plots/hybrid
-  python hybrid_privacy_tradeoff.py --results-glob "results/hybrid_ablation/*.csv" --out-dir plots/hybrid
+  python hybrid_privacy_tradeoff.py --results-glob "results/hybrid_ablation/*.csv" --out-dir plots/hybrid --order-by-score --lambda 1
 """
 
 import argparse
@@ -124,6 +127,23 @@ def main():
         default="linear",
         help="Y axis scale.",
     )
+    p.add_argument(
+        "--lambda",
+        dest="lambda_",
+        type=float,
+        default=1.0,
+        help="Weight for privacy risk in score: score = u - λ*r, r = max(0, 2*AUC-1). Used only with --order-by-score.",
+    )
+    p.add_argument(
+        "--order-by-score",
+        action="store_true",
+        help="Order conditions by score (u - λ*r) descending; best first.",
+    )
+    p.add_argument(
+        "--no-boxplots",
+        action="store_true",
+        help="Skip box plots (node-level accuracy and AUC by condition with mean ± std).",
+    )
     args = p.parse_args()
 
     xmin = 0.0 if args.xmin is None else args.xmin
@@ -197,17 +217,41 @@ def main():
         n_seeds=("mean_accuracy", "count"),
     )
 
-    # Stable order: baseline, DP only, Chunk only, hybrid
-    order = [
+    # Fixed order for box plot; score order used for bars/scatter when --order-by-score
+    fixed_order = [
         "No DP, no chunk (baseline)",
         "DP only",
         "Chunk only",
         "DP + chunk (hybrid)",
     ]
+    order = list(fixed_order)
+    # Optional: score = u - λ*r, r = max(0, 2*AUC-1); order by score descending
+    lam = getattr(args, "lambda_", 1.0)
+    by_cond["privacy_risk"] = np.maximum(0, 2 * by_cond["mean_auc"] - 1)
+    by_cond["score"] = by_cond["mean_accuracy"] - lam * by_cond["privacy_risk"]
+    if getattr(args, "order_by_score", False):
+        by_cond = by_cond.sort_values("score", ascending=False).reset_index(drop=True)
+        order = by_cond["condition"].tolist()
+    else:
+        by_cond["condition"] = pd.Categorical(by_cond["condition"], categories=order, ordered=True)
+        by_cond = by_cond.sort_values("condition").reset_index(drop=True)
     by_cond["condition"] = pd.Categorical(by_cond["condition"], categories=order, ordered=True)
-    by_cond = by_cond.sort_values("condition")
+
+    # Node-level data for target round (for box plots)
+    if target_round is not None:
+        round_df = full[full["round"] == target_round].copy()
+    else:
+        last_round = full.groupby("_source_file")["round"].transform("max")
+        round_df = full[full["round"] == last_round].copy()
+    round_df["_acc"] = round_df["global_test_acc"]
+    round_df["_auc"] = round_df[args.auc_col]
 
     os.makedirs(args.out_dir, exist_ok=True)
+
+    # Summary CSV with score (so you can see score per condition)
+    summary_path = os.path.join(args.out_dir, "hybrid_ablation_summary.csv")
+    by_cond.to_csv(summary_path, index=False)
+    print(f"Saved summary (with score): {summary_path}")
 
     # Figure 1: Bar chart – accuracy and AUC by condition
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
@@ -273,6 +317,68 @@ def main():
     fig.savefig(scatter_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved {scatter_path}")
+
+    # Figure 3: Box plots – fixed order (baseline, DP only, Chunk only, hybrid); boxes + mean ± std overlay
+    if not getattr(args, "no_boxplots", False):
+        cond_order = list(fixed_order)
+        acc_by_cond = [round_df.loc[round_df["condition"] == c, "_acc"].dropna().values for c in cond_order]
+        auc_by_cond = [round_df.loc[round_df["condition"] == c, "_auc"].dropna().values for c in cond_order]
+        pos = np.arange(len(cond_order))
+        fig3, (bx1, bx2) = plt.subplots(1, 2, figsize=(10, 4))
+        bp1 = bx1.boxplot(acc_by_cond, positions=pos, widths=0.5, patch_artist=True, showfliers=False)
+        bp2 = bx2.boxplot(auc_by_cond, positions=pos, widths=0.5, patch_artist=True, showfliers=False)
+        for patch in bp1["boxes"]:
+            patch.set_facecolor("tab:blue")
+            patch.set_alpha(0.6)
+        for patch in bp2["boxes"]:
+            patch.set_facecolor("tab:red")
+            patch.set_alpha(0.6)
+        for i, c in enumerate(cond_order):
+            row = by_cond[by_cond["condition"] == c].iloc[0]
+            mu_a = row["mean_accuracy"]
+            s_a = row["std_accuracy"] if pd.notna(row["std_accuracy"]) else 0
+            mu_u = row["mean_auc"]
+            s_u = row["std_auc"] if pd.notna(row["std_auc"]) else 0
+            bx1.plot([i], [mu_a], "k*", markersize=10)
+            bx1.errorbar([i], [mu_a], yerr=[s_a], fmt="none", color="black", capsize=3)
+            bx2.plot([i], [mu_u], "k*", markersize=10)
+            bx2.errorbar([i], [mu_u], yerr=[s_u], fmt="none", color="black", capsize=3)
+            # One outlier per box: the max (worst) value
+            if len(acc_by_cond[i]) > 0:
+                bx1.plot(i, np.max(acc_by_cond[i]), "o", color="tab:blue", markersize=5, alpha=0.8, zorder=5)
+            if len(auc_by_cond[i]) > 0:
+                bx2.plot(i, np.max(auc_by_cond[i]), "o", color="tab:red", markersize=5, alpha=0.8, zorder=5)
+        bx1.set_xticks(pos)
+        bx1.set_xticklabels(cond_order, rotation=15, ha="right")
+        bx1.set_ylabel("Test accuracy (node-level)")
+        bx1.set_ylim(ymin, ymax)
+        bx2.set_xticks(pos)
+        bx2.set_xticklabels(cond_order, rotation=15, ha="right")
+        bx2.set_ylabel(f"MIA {args.auc_col} (node-level)")
+        bx2.set_ylim(0.4, 1)
+        fig3.suptitle("Hybrid ablation: box plots (node-level); star = mean, error bar = std, circle = max (one outlier per box)")
+        plt.tight_layout()
+        box_path = os.path.join(args.out_dir, "hybrid_ablation_boxplots.png")
+        fig3.savefig(box_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"Saved {box_path}")
+
+    # Figure 4: Score bar chart – conditions ordered by score (best first), like the other script
+    by_cond_score = by_cond.sort_values("score", ascending=False).reset_index(drop=True)
+    fig4, ax4 = plt.subplots(figsize=(8, 4))
+    x = np.arange(len(by_cond_score))
+    colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(by_cond_score))[::-1])
+    ax4.bar(x, by_cond_score["score"].values, color=colors)
+    ax4.axhline(y=0, color="gray", linestyle="--", linewidth=0.8)
+    ax4.set_ylabel(f"Score (u − λr, r = max(0, 2·AUC−1)); λ = {lam}; higher = better")
+    ax4.set_xticks(x)
+    ax4.set_xticklabels(by_cond_score["condition"].values, rotation=15, ha="right")
+    ax4.set_title("Condition order by score (best first)")
+    plt.tight_layout()
+    score_path = os.path.join(args.out_dir, "hybrid_ablation_score.png")
+    fig4.savefig(score_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved {score_path}")
 
 
 if __name__ == "__main__":

@@ -4,9 +4,10 @@ Analyze hybrid (DP + chunk) sweep over noise multiplier and max_grad_norm.
 
 Reads MIA result CSVs from the noise/clip sweep, keeps only hybrid runs (dp1, chunk1),
 groups by (dp_noise, dp_max_grad_norm), and produces:
-  - summary CSV: mean ± std test accuracy and mean ± std MIA AUC per (noise, clip)
-  - scatter: accuracy vs AUC with points labeled by (noise, clip) to find sweet spot
-  - optional bar chart comparing accuracy and AUC across (noise, clip) configs
+  - summary CSV: mean ± std (node-level) test accuracy and MIA AUC per (noise, clip).
+    mean_accuracy = mean of global_test_acc (utility); mean_auc = mean of chosen AUC column (leakage).
+  - privacy risk r = max(0, 2*AUC - 1); score = u - λ*r (utility minus weighted risk). λ = --lambda, default 1. Higher score = better.
+  - scatter: accuracy vs AUC; optional bar charts; optional score bar chart ordered by best score.
 
 Usage:
   python scripts/analyze_hybrid_noise_clip_sweep.py --results-dir results/cifar100/hybrid_noise_clip_sweep/er_p_0.08 --out-dir plots/hybrid_noise_clip_sweep
@@ -107,6 +108,18 @@ def main():
         action="store_true",
         help="Skip bar chart (accuracy and AUC by config).",
     )
+    p.add_argument(
+        "--no-score-plot",
+        action="store_true",
+        help="Skip score bar chart (configs ordered by score, higher = better).",
+    )
+    p.add_argument(
+        "--lambda",
+        dest="lambda_",
+        type=float,
+        default=1.0,
+        help="Weight for privacy risk in score: score = u - λ*r, r = max(0, 2*AUC-1). Default 1.",
+    )
     args = p.parse_args()
 
     if args.results_glob:
@@ -141,46 +154,35 @@ def main():
     full = pd.concat(frames, ignore_index=True)
     target_round = args.round
 
-    # Per-file: last round (or target round), then mean over nodes
-    rows = []
-    for (src, dp_noise, dp_clip), g in full.groupby(
-        ["_source_file", "dp_noise", "dp_max_grad_norm"]
-    ):
-        if target_round is not None:
-            rdf = g[g["round"] == target_round]
-        else:
-            last_r = g["round"].max()
-            rdf = g[g["round"] == last_r]
-        if rdf.empty:
-            continue
-        acc = rdf["global_test_acc"].mean()
-        auc = rdf[args.auc_col].mean()
-        rows.append(
-            {
-                "dp_noise": dp_noise,
-                "dp_max_grad_norm": dp_clip,
-                "mean_accuracy": acc,
-                "mean_auc": auc,
-                "n_nodes": len(rdf),
-            }
-        )
+    # Keep node-level rows for target round only (one row per node per run)
+    if target_round is not None:
+        round_df = full[full["round"] == target_round].copy()
+    else:
+        last_round = full.groupby("_source_file")["round"].transform("max")
+        round_df = full[full["round"] == last_round].copy()
+    round_df["_acc"] = round_df["global_test_acc"]
+    round_df["_auc"] = round_df[args.auc_col]
 
-    run_df = pd.DataFrame(rows)
-    # Aggregate over seeds (same noise/clip can appear from different files = seeds)
-    by_config = run_df.groupby(
+    # Per (dp_noise, dp_max_grad_norm): mean and std across all nodes (node-level std)
+    by_config = round_df.groupby(
         ["dp_noise", "dp_max_grad_norm"], as_index=False
     ).agg(
-        mean_accuracy=("mean_accuracy", "mean"),
-        std_accuracy=("mean_accuracy", "std"),
-        mean_auc=("mean_auc", "mean"),
-        std_auc=("mean_auc", "std"),
-        n_runs=("mean_accuracy", "count"),
+        mean_accuracy=("_acc", "mean"),
+        std_accuracy=("_acc", "std"),
+        mean_auc=("_auc", "mean"),
+        std_auc=("_auc", "std"),
+        n_nodes=("_acc", "count"),
+        n_runs=("_source_file", "nunique"),
     )
-    by_config = by_config.sort_values(["dp_noise", "dp_max_grad_norm"])
+    # Privacy risk r = max(0, 2*AUC - 1); score = u - λ*r (higher = better)
+    lam = args.lambda_
+    by_config["privacy_risk"] = np.maximum(0, 2 * by_config["mean_auc"] - 1)
+    by_config["score"] = by_config["mean_accuracy"] - lam * by_config["privacy_risk"]
+    by_config = by_config.sort_values("score", ascending=False).reset_index(drop=True)
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    # Summary CSV
+    # Summary CSV (includes score; rows ordered by score descending = best first)
     summary_path = os.path.join(args.out_dir, "hybrid_noise_clip_sweep_summary.csv")
     by_config.to_csv(summary_path, index=False)
     print(f"Saved summary: {summary_path}")
@@ -241,6 +243,24 @@ def main():
         fig2.savefig(bar_path, dpi=150, bbox_inches="tight")
         plt.close()
         print(f"Saved bars: {bar_path}")
+
+    # Score bar chart: configs ordered by score (higher = better)
+    if not args.no_score_plot:
+        fig3, ax3 = plt.subplots(figsize=(10, 4))
+        x = np.arange(len(by_config))
+        labels = [f"σ={r['dp_noise']}, C={r['dp_max_grad_norm']}" for _, r in by_config.iterrows()]
+        colors = plt.cm.viridis(np.linspace(0.2, 0.8, len(by_config))[::-1])  # best = darker
+        bars = ax3.bar(x, by_config["score"].values, color=colors)
+        ax3.axhline(y=0, color="gray", linestyle="--", linewidth=0.8)
+        ax3.set_ylabel(f"Score (u − λr, r = max(0, 2·AUC−1)); λ = {lam}; higher = better")
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(labels, rotation=25, ha="right")
+        ax3.set_title("Combined metric: best configs first (ordered by score)")
+        plt.tight_layout()
+        score_path = os.path.join(args.out_dir, "hybrid_noise_clip_sweep_score.png")
+        fig3.savefig(score_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"Saved score plot: {score_path}")
 
     print("Done.")
 
