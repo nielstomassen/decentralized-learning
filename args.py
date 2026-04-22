@@ -23,7 +23,25 @@ def get_args():
     parser.add_argument('--dp-delta', dest='dp_delta', type=float, default=1e-5, help='Target delta for DP accounting.')
     parser.add_argument('--dp-logical-batch-size', dest='dp_logical_batch_size', type=int, default=None, help='When set and > batch-size, use Opacus BatchMemoryManager so DP accountant sees this logical batch size while physical batch size stays at batch-size (saves GPU memory).')
     parser.add_argument('--chunk', dest='enable_chunking', action='store_true', help='Enable chunking when communicating model updates with other nodes.')
-    parser.add_argument('--chunks-per-neighbor', type=int, default=1, dest='chunks_per_neighbor', help='When chunking is enabled: number of chunks each neighbor receives (default 1). Still d chunks total; each is sent to this many neighbors via sliding window to improve utility.')
+    parser.add_argument('--chunks-per-neighbor', type=int, default=1, dest='chunks_per_neighbor', help='Topology mode: max chunks per neighbor (capped by degree); also caps how many global chunks are sent in standard_chunking mode (see --chunking-mode).')
+    parser.add_argument(
+        '--chunking-mode',
+        type=str,
+        default='topology_rowblocks',
+        choices=['topology_rowblocks', 'standard_chunking'],
+        dest='chunking_mode',
+        help='topology_rowblocks: hybrid method: split each tensor into d row-blocks (d=degree), different chunks per neighbor. '
+        'standard_chunking: conventional baseline: flatten float weights to one vector, split into K global contiguous chunks, '
+        'pick one random subset per node per round, send the same subset to every neighbor.',
+    )
+    parser.add_argument(
+        '--standard-chunking-global-k',
+        type=int,
+        default=None,
+        dest='standard_chunking_global_k',
+        help='When --chunking-mode standard_chunking: number K of equal partitions of the flattened message (global, not degree-based). '
+        'Default: max(8, number of peers).',
+    )
     parser.add_argument('--eval', dest='enable_evaluation', action='store_true', help='Enable evaluation during training (default: disabled).')
     parser.add_argument('--eval-interval', type=int, default=1, help='Evaluate every N rounds (only used if --eval is set).')
     parser.add_argument('--eval-top-k', type=int, default=1, dest='eval_top_k', help='Count a prediction as correct if the true class is in the top-k predicted classes (default: 1, i.e. top-1 accuracy).')

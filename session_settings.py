@@ -83,7 +83,12 @@ class SessionSettings:
     validation_batch_size: int
     time_rounds: bool
     torch_device_name: str
-    dp_logical_batch_size: Optional[int] = None  # If > batch_size, use Opacus BatchMemoryManager 
+    dp_logical_batch_size: Optional[int] = None  # If > batch_size, use Opacus BatchMemoryManager
+    # topology_rowblocks: hybrid method: per-tensor row blocks split into d blocks (d=degree); different chunks per neighbor.
+    # standard_chunking: conventional baseline:one flattened float vector, K global contiguous chunks, same random subset to all neighbors.
+    chunking_mode: str = "topology_rowblocks"
+    # K partitions for standard_chunking (ignored for topology_rowblocks). None -> max(8, participants) at runtime.
+    standard_chunking_global_k: Optional[int] = None
 
     def __str__(self):
         return json.dumps(asdict(self), indent=4)

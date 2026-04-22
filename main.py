@@ -71,6 +71,8 @@ def build_settings():
         dp_logical_batch_size=args.dp_logical_batch_size,
         enable_chunking=args.enable_chunking,
         chunks_per_neighbor=args.chunks_per_neighbor,
+        chunking_mode=args.chunking_mode,
+        standard_chunking_global_k=args.standard_chunking_global_k,
         enable_evaluation=args.enable_evaluation,
         eval_interval=args.eval_interval,
         eval_top_k=args.eval_top_k,

@@ -302,6 +302,21 @@ class MIARunner:
         for part in victim_chunk_seen.get("parts", []):
             k = part["k"]
             v = part["v"]
+            layout = part.get("layout", "rows")
+
+            # Standard chunking
+            if layout == "param_flat":
+                lo, hi = int(part["start"]), int(part["end"])
+                vv = v.detach().reshape(-1).to(device=base_state[k].device, dtype=base_state[k].dtype)
+                if message_type == "full":
+                    base_state[k].view(-1)[lo:hi] = vv
+                elif message_type == "delta":
+                    base_state[k].view(-1)[lo:hi] = base_state[k].view(-1)[lo:hi] + vv
+                else:
+                    raise ValueError(f"Unknown message_type: {message_type}")
+                continue
+
+            # Hybrid   
             s, e = part["start"], part["end"]
 
             if message_type == "full":
@@ -447,6 +462,10 @@ class MIARunner:
         dp_tag = "dp1" if settings.enable_dp else "dp0"
         chunk_tag = "chunk1" if settings.enable_chunking else "chunk0"
         cpn_tag = f"cpn{getattr(settings, 'chunks_per_neighbor', 1)}" if settings.enable_chunking else "cpn1"
+        cm = getattr(settings, "chunking_mode", "topology_rowblocks")
+        cm_tag = f"_cmstd_g{int(settings.standard_chunking_global_k)}" if (
+            settings.enable_chunking and cm == "standard_chunking" and settings.standard_chunking_global_k is not None
+        ) else ("_cmstd" if (settings.enable_chunking and cm == "standard_chunking") else "")
         noise_tag = f"noise{settings.dp_noise_multiplier}" if settings.enable_dp else "noise0"
         clip_tag = f"clip{settings.dp_max_grad_norm}" if settings.enable_dp else "clip0"
         filename = (
@@ -454,7 +473,7 @@ class MIARunner:
             f"alpha{settings.alpha}_"
             f"beta{settings.beta}_"
             f"message{settings.message_type}_"
-            f"{dp_tag}_{chunk_tag}_{cpn_tag}_{noise_tag}_{clip_tag}_"
+            f"{dp_tag}_{chunk_tag}_{cpn_tag}{cm_tag}_{noise_tag}_{clip_tag}_"
             f"seed{settings.seed}.csv"
         )
         filepath = os.path.join(self.config.mia_results_root, filename)

@@ -59,19 +59,39 @@ def local_training_phase(nodes, learning_settings, device: str) -> None:
         if "cuda" in device and torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-def communication_phase_chunked(nodes, seed: int, round_nr: int, enable_chunking: bool, chunks_per_neighbor: int = 1):
+def communication_phase_chunked(nodes, seed: int, round_nr: int, settings):
     """
     Build chunked messages, deliver them, and return them.
+
+    ``settings.chunking_mode``:
+      - ``topology_rowblocks`` hybrid: per-edge row-block chunking (see ``Node.prepare_messages_for_neighbors_rowblocks``).
+      - ``standard_chunking`` baseline: global flat vector, K partitions, same subset to all neighbors (see
+        ``Node.prepare_messages_standard_flat_chunks``), only when ``settings.enable_chunking``.
 
     Returns:
       sent: dict[sender_id -> dict[receiver_id -> chunk_dict]]
     """
     sent = {}
+    mode = getattr(settings, "chunking_mode", "topology_rowblocks")
+    use_standard = bool(settings.enable_chunking and mode == "standard_chunking")
 
     for sender in nodes:
         # Deterministic per (seed, round, sender)
         s = seed * 10_000_000 + round_nr * 10_000 + sender.id
-        sent[sender.id] = sender.prepare_messages_for_neighbors_rowblocks(seed=s, enable_chunking=enable_chunking, chunks_per_neighbor=chunks_per_neighbor)
+        if use_standard:
+            sent[sender.id] = sender.prepare_messages_standard_flat_chunks(
+                seed=s,
+                enable_chunking=True,
+                chunks_per_neighbor=settings.chunks_per_neighbor,
+                global_k=sender.standard_chunking_global_k,
+            )
+        # Hybrid
+        else:
+            sent[sender.id] = sender.prepare_messages_for_neighbors_rowblocks(
+                seed=s,
+                enable_chunking=settings.enable_chunking,
+                chunks_per_neighbor=settings.chunks_per_neighbor,
+            )
 
     # Deliver exactly what was sent
     for receiver in nodes:
@@ -110,7 +130,7 @@ def run_round(round_nr: int, topology, nodes, settings, test_loaders, device: st
 
     
     # 2) Build + deliver chunked messages ONCE
-    sent = communication_phase_chunked(nodes, seed=settings.seed, round_nr=round_nr, enable_chunking=settings.enable_chunking, chunks_per_neighbor=settings.chunks_per_neighbor)
+    sent = communication_phase_chunked(nodes, seed=settings.seed, round_nr=round_nr, settings=settings)
 
     # 3) Run MIA using the SAME sent messages (attacker-view)
     if mia_runner is not None:
