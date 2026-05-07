@@ -72,6 +72,7 @@ def build_settings():
         enable_chunking=args.enable_chunking,
         chunks_per_neighbor=args.chunks_per_neighbor,
         chunking_mode=args.chunking_mode,
+        topology_rowblocks_neighbor_policy=args.topology_rowblocks_neighbor_policy,
         standard_chunking_global_k=args.standard_chunking_global_k,
         enable_evaluation=args.enable_evaluation,
         eval_interval=args.eval_interval,

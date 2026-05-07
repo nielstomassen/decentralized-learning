@@ -30,7 +30,8 @@ def get_args():
         default='topology_rowblocks',
         choices=['topology_rowblocks', 'standard_chunking'],
         dest='chunking_mode',
-        help='topology_rowblocks: hybrid method: split each tensor into d row-blocks (d=degree), different chunks per neighbor. '
+        help='topology_rowblocks: hybrid method: split each tensor into d row-blocks (d=degree); per-neighbor vs same-to-all '
+        'is controlled by --topology-rowblocks-neighbor-policy. '
         'standard_chunking: conventional baseline: flatten float weights to one vector, split into K global contiguous chunks, '
         'pick one random subset per node per round, send the same subset to every neighbor.',
     )
@@ -41,6 +42,16 @@ def get_args():
         dest='standard_chunking_global_k',
         help='When --chunking-mode standard_chunking: number K of equal partitions of the flattened message (global, not degree-based). '
         'Default: max(8, number of peers).',
+    )
+    parser.add_argument(
+        '--topology-rowblocks-neighbor-policy',
+        type=str,
+        default='per_neighbor',
+        choices=['per_neighbor', 'broadcast_same'],
+        dest='topology_rowblocks_neighbor_policy',
+        help='Only for --chunking-mode topology_rowblocks: per_neighbor (default) assigns different row-blocks per neighbor '
+        '(sliding window over d shuffled blocks). broadcast_same picks K=min(chunks-per-neighbor, degree) block indices once '
+        'and sends the same row-blocks to every neighbor (like standard_chunking broadcast, but partitions are degree-based rows).',
     )
     parser.add_argument('--eval', dest='enable_evaluation', action='store_true', help='Enable evaluation during training (default: disabled).')
     parser.add_argument('--eval-interval', type=int, default=1, help='Evaluate every N rounds (only used if --eval is set).')

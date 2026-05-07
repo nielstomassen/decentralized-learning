@@ -15,7 +15,7 @@ class Node:
     Node with:
       - local SGD training
       - chunked communication, either:
-          * ``topology_rowblocks`` (default): per-tensor row blocks split by degree; edge-specific chunks; or
+          * ``topology_rowblocks`` (default): per-tensor row blocks split by degree; policy controls per-neighbor vs broadcast-same; or
           * ``standard_chunking``: one flattened float vector, K global contiguous chunks, same subset to all neighbors
       - averaging that updates only the entries actually received (row slices or ``param_flat`` slices)
     """
@@ -280,7 +280,8 @@ class Node:
         - **Broadcasts** the same list of parts to every neighbor (no per-neighbor differentiation).
 
         Contrasts with ``prepare_messages_for_neighbors_rowblocks`` (**topology_rowblocks**): there, each tensor
-        is split into d row-blocks (d = degree) and neighbors receive different chunks (edge-specific).
+        is split into d row-blocks (d = degree); with default ``neighbor_policy="per_neighbor"`` neighbors receive
+        different chunks (edge-specific), while ``neighbor_policy="broadcast_same"`` sends one sampled subset to all.
         """
         if not self.neighbors:
             return {}
@@ -338,6 +339,7 @@ class Node:
         broadcast_unsplittable: bool = False,
         enable_chunking: bool = False,
         chunks_per_neighbor: int = 1,
+        neighbor_policy: str = "per_neighbor",
     ) -> dict[int, dict]:
         """
         **topology_rowblocks** (proposed / topology-aware): balanced per-tensor row-block messages.
@@ -345,9 +347,12 @@ class Node:
         - For splittable tensors:
             split into d row-blocks (d = sender degree),
             shuffle blocks deterministically with seed,
-            then assign so each neighbor receives chunks_per_neighbor chunks (sliding window).
-            Same d chunks total; duplication improves utility. Default 1 = one chunk per neighbor.
-            Chunking is **edge-specific** (different neighbors can receive different row blocks).
+            then either:
+            * ``neighbor_policy="per_neighbor"`` (default): each neighbor receives up to ``chunks_per_neighbor``
+              chunks via a sliding window over the shuffled blocks (**edge-specific**).
+            * ``neighbor_policy="broadcast_same"``: sample ``K = max(1, min(chunks_per_neighbor, d))`` block indices
+              once (without replacement among the d blocks) and append those same row-blocks to every neighbor's
+              message (same traffic pattern as **standard_chunking** broadcast, but partitions follow degree-based rows).
 
         - For unsplittable tensors:
             if broadcast_unsplittable=True: send to all neighbors
@@ -385,12 +390,22 @@ class Node:
                 blocks = self._split_rows(t, d)  # exactly d blocks
                 rng.shuffle(blocks)              # random permutation per round (deterministic given seed)
 
-                K = max(1, min(chunks_per_neighbor, d))  # each neighbor gets K of the d chunks (sliding window)
-                for j, nb in enumerate(nbs):
-                    for offset in range(K):
-                        idx = (j + offset) % d
+                K = max(1, min(chunks_per_neighbor, d))
+                if neighbor_policy == "broadcast_same":
+                    chosen = rng.sample(range(d), K) if K < d else list(range(d))
+                    for idx in sorted(chosen):
                         s, e, chunk = blocks[idx]
-                        out[nb]["parts"].append({"k": k, "start": int(s), "end": int(e), "v": chunk.detach().clone()})
+                        for nb in nbs:
+                            out[nb]["parts"].append(
+                                {"k": k, "start": int(s), "end": int(e), "v": chunk.detach().clone()}
+                            )
+                else:
+                    # per_neighbor: sliding window (edge-specific chunks)
+                    for j, nb in enumerate(nbs):
+                        for offset in range(K):
+                            idx = (j + offset) % d
+                            s, e, chunk = blocks[idx]
+                            out[nb]["parts"].append({"k": k, "start": int(s), "end": int(e), "v": chunk.detach().clone()})
 
             else:
                 part_v = t

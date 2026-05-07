@@ -463,9 +463,19 @@ class MIARunner:
         chunk_tag = "chunk1" if settings.enable_chunking else "chunk0"
         cpn_tag = f"cpn{getattr(settings, 'chunks_per_neighbor', 1)}" if settings.enable_chunking else "cpn1"
         cm = getattr(settings, "chunking_mode", "topology_rowblocks")
+        topo_policy = getattr(settings, "topology_rowblocks_neighbor_policy", "per_neighbor")
+        topo_bcast_tag = (
+            "_tpsame"
+            if (
+                settings.enable_chunking
+                and cm == "topology_rowblocks"
+                and topo_policy == "broadcast_same"
+            )
+            else ""
+        )
         cm_tag = f"_cmstd_g{int(settings.standard_chunking_global_k)}" if (
             settings.enable_chunking and cm == "standard_chunking" and settings.standard_chunking_global_k is not None
-        ) else ("_cmstd" if (settings.enable_chunking and cm == "standard_chunking") else "")
+        ) else ("_cmstd" if (settings.enable_chunking and cm == "standard_chunking") else topo_bcast_tag)
         noise_tag = f"noise{settings.dp_noise_multiplier}" if settings.enable_dp else "noise0"
         clip_tag = f"clip{settings.dp_max_grad_norm}" if settings.enable_dp else "clip0"
         filename = (

@@ -64,7 +64,8 @@ def communication_phase_chunked(nodes, seed: int, round_nr: int, settings):
     Build chunked messages, deliver them, and return them.
 
     ``settings.chunking_mode``:
-      - ``topology_rowblocks`` hybrid: per-edge row-block chunking (see ``Node.prepare_messages_for_neighbors_rowblocks``).
+      - ``topology_rowblocks`` hybrid: row-block chunking split by degree (see ``Node.prepare_messages_for_neighbors_rowblocks``;
+        neighbor policy from ``settings.topology_rowblocks_neighbor_policy``).
       - ``standard_chunking`` baseline: global flat vector, K partitions, same subset to all neighbors (see
         ``Node.prepare_messages_standard_flat_chunks``), only when ``settings.enable_chunking``.
 
@@ -91,6 +92,9 @@ def communication_phase_chunked(nodes, seed: int, round_nr: int, settings):
                 seed=s,
                 enable_chunking=settings.enable_chunking,
                 chunks_per_neighbor=settings.chunks_per_neighbor,
+                neighbor_policy=getattr(
+                    settings, "topology_rowblocks_neighbor_policy", "per_neighbor"
+                ),
             )
 
     # Deliver exactly what was sent

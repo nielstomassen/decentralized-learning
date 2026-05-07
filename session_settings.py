@@ -87,6 +87,9 @@ class SessionSettings:
     # topology_rowblocks: hybrid method: per-tensor row blocks split into d blocks (d=degree); different chunks per neighbor.
     # standard_chunking: conventional baseline:one flattened float vector, K global contiguous chunks, same random subset to all neighbors.
     chunking_mode: str = "topology_rowblocks"
+    # topology_rowblocks only: per_neighbor = sliding window (different row-blocks per neighbor);
+    # broadcast_same = sample K blocks once (K from chunks_per_neighbor, capped by degree), send the same set to all neighbors.
+    topology_rowblocks_neighbor_policy: str = "per_neighbor"
     # K partitions for standard_chunking (ignored for topology_rowblocks). None -> max(8, participants) at runtime.
     standard_chunking_global_k: Optional[int] = None
 
