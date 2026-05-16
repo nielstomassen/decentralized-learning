@@ -84,11 +84,11 @@ class SessionSettings:
     time_rounds: bool
     torch_device_name: str
     dp_logical_batch_size: Optional[int] = None  # If > batch_size, use Opacus BatchMemoryManager
-    # topology_rowblocks: hybrid method: per-tensor row blocks split into d blocks (d=degree); different chunks per neighbor.
-    # standard_chunking: conventional baseline:one flattened float vector, K global contiguous chunks, same random subset to all neighbors.
+    # topology_rowblocks: per-tensor row blocks, d blocks per tensor (d=degree).
+    # topology_flat_degree: flatten float weights, d contiguous global chunks (like standard_chunking but K=d).
+    # standard_chunking: flatten, K global chunks, same random subset to all neighbors.
     chunking_mode: str = "topology_rowblocks"
-    # topology_rowblocks only: per_neighbor = sliding window (different row-blocks per neighbor);
-    # broadcast_same = sample K blocks once (K from chunks_per_neighbor, capped by degree), send the same set to all neighbors.
+    # topology_rowblocks / topology_flat_degree: per_neighbor vs broadcast_same chunk assignment.
     topology_rowblocks_neighbor_policy: str = "per_neighbor"
     # K partitions for standard_chunking (ignored for topology_rowblocks). None -> max(8, participants) at runtime.
     standard_chunking_global_k: Optional[int] = None

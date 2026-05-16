@@ -15,8 +15,9 @@ class Node:
     Node with:
       - local SGD training
       - chunked communication, either:
-          * ``topology_rowblocks`` (default): per-tensor row blocks split by degree; policy controls per-neighbor vs broadcast-same; or
-          * ``standard_chunking``: one flattened float vector, K global contiguous chunks, same subset to all neighbors
+          * ``topology_rowblocks`` (default): per-tensor row blocks split by degree; policy controls per-neighbor vs broadcast-same;
+          * ``topology_flat_degree``: flatten float weights, split into d=degree contiguous chunks (same layout as standard_chunking);
+          * ``standard_chunking``: flatten, K global contiguous chunks, same subset to all neighbors
       - averaging that updates only the entries actually received (row slices or ``param_flat`` slices)
     """
 
@@ -261,27 +262,21 @@ class Node:
             out.append(q)
         return out
 
-    def prepare_messages_standard_flat_chunks(
+    def prepare_messages_flat_chunks(
         self,
         seed: int | None = None,
         enable_chunking: bool = False,
         chunks_per_neighbor: int = 1,
-        global_k: int | None = None,
+        num_partitions: int | None = None,
+        neighbor_policy: str = "broadcast_same",
     ) -> dict[int, dict]:
         """
-        Conventional **standard_chunking** baseline (topology-agnostic, node-level).
+        Flatten all floating-point message tensors into one vector (fixed key order), partition into
+        contiguous segments, assign segments to neighbors.
 
-        - Flattens all floating-point message tensors (full or delta) into one 1D vector (fixed key order).
-        - Splits that vector into K_eff <= K nearly equal contiguous segments (K from ``global_k``).
-        - Once per call: sample a subset of segment indices (uniform without replacement among the K_eff
-          global segments). Subset size uses the same **count** cap as topology mode,
-          ``max(1, min(chunks_per_neighbor, degree, K_eff))`` — degree limits how many segments are sent, not how
-          the vector is partitioned.
-        - **Broadcasts** the same list of parts to every neighbor (no per-neighbor differentiation).
-
-        Contrasts with ``prepare_messages_for_neighbors_rowblocks`` (**topology_rowblocks**): there, each tensor
-        is split into d row-blocks (d = degree); with default ``neighbor_policy="per_neighbor"`` neighbors receive
-        different chunks (edge-specific), while ``neighbor_policy="broadcast_same"`` sends one sampled subset to all.
+        - ``num_partitions``: number of equal segments; ``None`` uses sender degree ``d``.
+        - ``neighbor_policy``: ``broadcast_same`` sends the same sampled segments to every neighbor;
+          ``per_neighbor`` uses a sliding window over shuffled segments (edge-specific).
         """
         if not self.neighbors:
             return {}
@@ -316,21 +311,73 @@ class Node:
             offset += m
 
         nbs = sorted(self.neighbors)
-        K = int(global_k) if global_k is not None else int(self.standard_chunking_global_k)
-        ranges = self._partition_index_range(n, K)
-        K_eff = len(ranges)
-        rng = random.Random(seed)
         d = len(nbs)
-        # Match topology_rowblocks traffic cap (min(cpn, d)), but partition size K_eff is global — not d.
-        cap = max(1, min(int(chunks_per_neighbor), d, K_eff))
-        chosen = rng.sample(range(K_eff), cap) if cap < K_eff else list(range(K_eff))
+        K_part = int(num_partitions) if num_partitions is not None else d
+        ranges = self._partition_index_range(n, K_part)
+        rng = random.Random(seed)
+        blocks = list(ranges)
+        rng.shuffle(blocks)
 
-        base_parts: list[dict] = []
-        for idx in sorted(chosen):
-            gs, ge = ranges[idx]
-            base_parts.extend(self._parts_for_global_flat_interval(vec, gs, ge, pieces))
+        chunks_per_nb = max(1, min(int(chunks_per_neighbor), d, len(blocks)))
 
-        return {nb: {"parts": self._clone_parts(base_parts)} for nb in nbs}
+        if neighbor_policy == "broadcast_same":
+            cap = chunks_per_nb
+            chosen = rng.sample(range(len(blocks)), cap) if cap < len(blocks) else list(range(len(blocks)))
+            base_parts: list[dict] = []
+            for idx in sorted(chosen):
+                gs, ge = blocks[idx]
+                base_parts.extend(self._parts_for_global_flat_interval(vec, gs, ge, pieces))
+            cloned = self._clone_parts(base_parts)
+            return {nb: {"parts": cloned} for nb in nbs}
+
+        out = {nb: {"parts": []} for nb in nbs}
+        for j, nb in enumerate(nbs):
+            for offset_i in range(chunks_per_nb):
+                gs, ge = blocks[(j + offset_i) % len(blocks)]
+                out[nb]["parts"].extend(
+                    self._parts_for_global_flat_interval(vec, gs, ge, pieces)
+                )
+        for nb in nbs:
+            out[nb]["parts"] = self._clone_parts(out[nb]["parts"])
+        return out
+
+    def prepare_messages_standard_flat_chunks(
+        self,
+        seed: int | None = None,
+        enable_chunking: bool = False,
+        chunks_per_neighbor: int = 1,
+        global_k: int | None = None,
+    ) -> dict[int, dict]:
+        """
+        **standard_chunking** baseline: global flat vector, ``K`` partitions, broadcast same subset to all neighbors.
+        """
+        K = int(global_k) if global_k is not None else int(self.standard_chunking_global_k)
+        return self.prepare_messages_flat_chunks(
+            seed=seed,
+            enable_chunking=enable_chunking,
+            chunks_per_neighbor=chunks_per_neighbor,
+            num_partitions=K,
+            neighbor_policy="broadcast_same",
+        )
+
+    def prepare_messages_topology_flat_degree(
+        self,
+        seed: int | None = None,
+        enable_chunking: bool = False,
+        chunks_per_neighbor: int = 1,
+        neighbor_policy: str = "per_neighbor",
+    ) -> dict[int, dict]:
+        """
+        **topology_flat_degree**: like standard_chunking (flatten then contiguous segments) but
+        ``num_partitions = degree``; neighbor assignment from ``neighbor_policy`` (default per-neighbor).
+        """
+        return self.prepare_messages_flat_chunks(
+            seed=seed,
+            enable_chunking=enable_chunking,
+            chunks_per_neighbor=chunks_per_neighbor,
+            num_partitions=None,
+            neighbor_policy=neighbor_policy,
+        )
 
     def prepare_messages_for_neighbors_rowblocks(
         self,

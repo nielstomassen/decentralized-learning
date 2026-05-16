@@ -64,37 +64,40 @@ def communication_phase_chunked(nodes, seed: int, round_nr: int, settings):
     Build chunked messages, deliver them, and return them.
 
     ``settings.chunking_mode``:
-      - ``topology_rowblocks`` hybrid: row-block chunking split by degree (see ``Node.prepare_messages_for_neighbors_rowblocks``;
-        neighbor policy from ``settings.topology_rowblocks_neighbor_policy``).
-      - ``standard_chunking`` baseline: global flat vector, K partitions, same subset to all neighbors (see
-        ``Node.prepare_messages_standard_flat_chunks``), only when ``settings.enable_chunking``.
+      - ``topology_rowblocks``: per-tensor row blocks split by degree (``Node.prepare_messages_for_neighbors_rowblocks``).
+      - ``topology_flat_degree``: flatten parameters, split into ``d`` contiguous chunks (``Node.prepare_messages_topology_flat_degree``).
+      - ``standard_chunking``: flatten, ``K`` global partitions, same subset to all neighbors.
 
     Returns:
       sent: dict[sender_id -> dict[receiver_id -> chunk_dict]]
     """
     sent = {}
     mode = getattr(settings, "chunking_mode", "topology_rowblocks")
-    use_standard = bool(settings.enable_chunking and mode == "standard_chunking")
+    topo_policy = getattr(settings, "topology_rowblocks_neighbor_policy", "per_neighbor")
 
     for sender in nodes:
         # Deterministic per (seed, round, sender)
         s = seed * 10_000_000 + round_nr * 10_000 + sender.id
-        if use_standard:
+        if settings.enable_chunking and mode == "standard_chunking":
             sent[sender.id] = sender.prepare_messages_standard_flat_chunks(
                 seed=s,
                 enable_chunking=True,
                 chunks_per_neighbor=settings.chunks_per_neighbor,
                 global_k=sender.standard_chunking_global_k,
             )
-        # Hybrid
+        elif settings.enable_chunking and mode == "topology_flat_degree":
+            sent[sender.id] = sender.prepare_messages_topology_flat_degree(
+                seed=s,
+                enable_chunking=True,
+                chunks_per_neighbor=settings.chunks_per_neighbor,
+                neighbor_policy=topo_policy,
+            )
         else:
             sent[sender.id] = sender.prepare_messages_for_neighbors_rowblocks(
                 seed=s,
                 enable_chunking=settings.enable_chunking,
                 chunks_per_neighbor=settings.chunks_per_neighbor,
-                neighbor_policy=getattr(
-                    settings, "topology_rowblocks_neighbor_policy", "per_neighbor"
-                ),
+                neighbor_policy=topo_policy,
             )
 
     # Deliver exactly what was sent

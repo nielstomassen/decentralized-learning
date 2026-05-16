@@ -468,14 +468,21 @@ class MIARunner:
             "_tpsame"
             if (
                 settings.enable_chunking
-                and cm == "topology_rowblocks"
+                and cm in ("topology_rowblocks", "topology_flat_degree")
                 and topo_policy == "broadcast_same"
             )
             else ""
         )
-        cm_tag = f"_cmstd_g{int(settings.standard_chunking_global_k)}" if (
-            settings.enable_chunking and cm == "standard_chunking" and settings.standard_chunking_global_k is not None
-        ) else ("_cmstd" if (settings.enable_chunking and cm == "standard_chunking") else topo_bcast_tag)
+        if settings.enable_chunking and cm == "standard_chunking":
+            cm_tag = (
+                f"_cmstd_g{int(settings.standard_chunking_global_k)}"
+                if settings.standard_chunking_global_k is not None
+                else "_cmstd"
+            )
+        elif settings.enable_chunking and cm == "topology_flat_degree":
+            cm_tag = "_cmflatd" + topo_bcast_tag
+        else:
+            cm_tag = topo_bcast_tag
         noise_tag = f"noise{settings.dp_noise_multiplier}" if settings.enable_dp else "noise0"
         clip_tag = f"clip{settings.dp_max_grad_norm}" if settings.enable_dp else "clip0"
         filename = (

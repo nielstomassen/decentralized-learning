@@ -28,12 +28,12 @@ def get_args():
         '--chunking-mode',
         type=str,
         default='topology_rowblocks',
-        choices=['topology_rowblocks', 'standard_chunking'],
+        choices=['topology_rowblocks', 'topology_flat_degree', 'standard_chunking'],
         dest='chunking_mode',
-        help='topology_rowblocks: hybrid method: split each tensor into d row-blocks (d=degree); per-neighbor vs same-to-all '
-        'is controlled by --topology-rowblocks-neighbor-policy. '
-        'standard_chunking: conventional baseline: flatten float weights to one vector, split into K global contiguous chunks, '
-        'pick one random subset per node per round, send the same subset to every neighbor.',
+        help='topology_rowblocks: split each tensor into d row-blocks (d=degree). '
+        'topology_flat_degree: flatten all float weights, split into d contiguous chunks (like fixed-K but K=d). '
+        'standard_chunking: flatten, K global chunks, same subset to all neighbors. '
+        'Per-neighbor vs broadcast for topology_* modes: --topology-rowblocks-neighbor-policy.',
     )
     parser.add_argument(
         '--standard-chunking-global-k',
@@ -49,9 +49,9 @@ def get_args():
         default='per_neighbor',
         choices=['per_neighbor', 'broadcast_same'],
         dest='topology_rowblocks_neighbor_policy',
-        help='Only for --chunking-mode topology_rowblocks: per_neighbor (default) assigns different row-blocks per neighbor '
-        '(sliding window over d shuffled blocks). broadcast_same picks K=min(chunks-per-neighbor, degree) block indices once '
-        'and sends the same row-blocks to every neighbor (like standard_chunking broadcast, but partitions are degree-based rows).',
+        help='For topology_rowblocks and topology_flat_degree: per_neighbor (default) assigns different chunks per neighbor '
+        '(sliding window over d shuffled blocks). broadcast_same picks min(chunks-per-neighbor, degree) blocks once and sends '
+        'the same chunks to every neighbor.',
     )
     parser.add_argument('--eval', dest='enable_evaluation', action='store_true', help='Enable evaluation during training (default: disabled).')
     parser.add_argument('--eval-interval', type=int, default=1, help='Evaluate every N rounds (only used if --eval is set).')
