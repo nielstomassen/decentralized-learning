@@ -79,6 +79,21 @@ def iid_partition_indices(dataset_len: int, num_nodes: int, shuffle: bool = True
 
     return node_indices
 
+
+def cap_indices_per_node(indices_per_node, max_samples: int, seed: int):
+    """Subsample each node to at most max_samples indices (no-op if a node has fewer)."""
+    capped = []
+    for node_id, inds in enumerate(indices_per_node):
+        inds_arr = np.asarray(inds)
+        if len(inds_arr) <= max_samples:
+            capped.append(inds_arr.tolist())
+            continue
+        rng = np.random.RandomState(seed + node_id)
+        chosen = rng.choice(len(inds_arr), max_samples, replace=False)
+        capped.append(inds_arr[chosen].tolist())
+    return capped
+
+
 def dirichlet_partition_indices(
     dataset,
     num_nodes: int,
@@ -140,32 +155,38 @@ def partition_dataset(
     batch_size: int = 32,
     strategy: str = "iid",                  # "iid" or "dirichlet"
     dirichlet_alpha: float = 0.1,
-    dirichlet_samples_per_node: int | None = None,
+    max_samples_per_node: int | None = None,
     shuffle: bool = True,
 ):
     """
     High-level partition function.
 
     strategy:
-        - "iid": nearly equal random split
+        - "iid": nearly equal random split, then optional cap per node
         - "dirichlet": label-skew via Dirichlet(alpha)
 
     dirichlet_alpha:
         smaller -> more skew; larger -> closer to iid
 
-    dirichlet_samples_per_node:
-        max number of samples per client in Dirichlet case (None = keep all)
+    max_samples_per_node:
+        Max samples per client before train/holdout split.
+        IID: cap after equal split (None or <=0 = no cap).
+        Dirichlet: target count per client (None = use full dataset as upper bound).
     """
     random.seed(seed)
     np.random.seed(seed)
     if strategy == "iid":
         indices_per_node = iid_partition_indices(len(dataset), num_nodes, shuffle=shuffle)
+        if max_samples_per_node is not None and max_samples_per_node > 0:
+            indices_per_node = cap_indices_per_node(
+                indices_per_node, max_samples_per_node, seed
+            )
 
     elif strategy == "dirichlet":
         indices_per_node = dirichlet_partition_indices(
             dataset,
             num_nodes=num_nodes,
-            no_samples=dirichlet_samples_per_node,
+            no_samples=max_samples_per_node,
             alpha=dirichlet_alpha,
         )
     else:

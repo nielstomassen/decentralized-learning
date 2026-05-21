@@ -61,7 +61,7 @@ def get_args():
     parser.add_argument('--device', type=str, default=None, help='Device for training (e.g. cuda:0, cpu). If not set, auto-detects CUDA/MPS/CPU.')
     parser.add_argument('--partitioner', type=str, default="iid", choices=["iid", "dirichlet"], help="Data partitioning strategy used.")
     parser.add_argument('--alpha', type=float, default=0.1, help="Alpha used for dirichlet partitioning. Smaller alpha -> more skew; larger alpha -> closer to iid.")
-    parser.add_argument('--no-samples', type=int, default=2000, help="Number of images to sample per node for dirichlet partitioning.")
+    parser.add_argument('--no-samples', type=int, default=2000, help="Max training images per node before holdout split. IID: cap after equal split. Dirichlet: target per-node count after label-skew allocation.")
     parser.add_argument('--beta', type=float, default = 0.2, help="Controls how strongly each node mixes its model with its neighbors during decentralized averaging. Beta=0 is no communication, beta=1 is full neighbor consensus (ignore own update).")
     parser.add_argument('--message-type', type=str, default="full", choices=['full', 'delta'], help="Type of message sent by nodes to their neighbors; full model or just the model update.")
     # Add later 

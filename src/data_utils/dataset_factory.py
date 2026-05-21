@@ -143,7 +143,7 @@ class DatasetFactory:
             batch_size=train_batch_size,
             strategy=partioner,
             dirichlet_alpha=alpha,
-            dirichlet_samples_per_node=no_samples,
+            max_samples_per_node=no_samples,
             seed=seed
         )
 
