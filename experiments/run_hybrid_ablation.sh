@@ -1,7 +1,7 @@
 #!/bin/bash
 # 2×2 ablation: (no DP, no chunk), (DP only), (chunk only), (DP + chunk).
 # Runs each condition for every seed in SEEDS; plot script averages over seeds.
-
+# Used for ChunkDP ablation section in the thesis
 set -e
 cd "$(dirname "$0")/.."
 LOG_DIR=${LOG_DIR:-logs}
@@ -12,11 +12,11 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
 # Space-separated list of seeds (each condition is run once per seed)
-SEEDS="${SEEDS:-4235}"
+SEEDS="${SEEDS:-4235 45 929 9838 12}"
 # Space-separated list of ER graph p values to sweep
-ER_PS="${ER_PS:-0.08}"
+ER_PS="${ER_PS:-0.16 0.08}"
 DP_NOISE=${DP_NOISE:-0.5}
-RESULTS_ROOT=${RESULTS_ROOT:-results/cifar100/hybrid_ablation}
+RESULTS_ROOT=${RESULTS_ROOT:-results/hybrid_ablation}
 # Single batch size for ablation (32). DP runs override to 12 for GPU memory and use Opacus BatchMemoryManager with logical BATCH_SIZE.
 BATCH_SIZE=${BATCH_SIZE:-32}
 EXTRA_ARGS=()
@@ -41,8 +41,8 @@ BASE_ARGS=(
   --alpha 0.3
   --weight-decay 0
   --message-type "full"
-  --mia-measurement-number 1000
-  --no-samples 1000
+  --mia-measurement-number 400
+  --no-samples 400
   --eval-top-k 5
   "${EXTRA_ARGS[@]}"
 )
@@ -59,22 +59,22 @@ for er_p in $ER_PS; do
 
   for seed in $SEEDS; do
     # 1) No DP, no chunk (baseline)
-    echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  seed=$seed"
-    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
-    echo ""
+   echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  seed=$seed"
+   python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed"
+   echo ""
 
     # 2) DP only — physical batch 12 for GPU memory, logical batch BATCH_SIZE
-    echo "[2/4] DP only  er_p=$er_p  seed=$seed"
-    python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" || { echo "ERROR: [2/4] DP-only run failed with exit code $?"; exit 1; }
-    echo ""
+   echo "[2/4] DP only  er_p=$er_p  seed=$seed"
+   python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" || { echo "ERROR: [2/4] DP-only run failed with exit code $?"; exit 1; }
+   echo ""
     # 3) Chunk only
     echo "[3/4] Chunk only  er_p=$er_p  seed=$seed"
-    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --chunk
+    python3 -u main.py "${BASE_ARGS[@]}" --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --chunk --chunking-mode "topology_rowblocks" --topology-rowblocks-neighbor-policy "per_neighbor"
     echo ""
 
     # 4) DP + chunk (hybrid) — physical batch 12 for GPU memory, logical batch BATCH_SIZE
     echo "[4/4] DP + chunk (hybrid)  er_p=$er_p  seed=$seed"
-    python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" --chunk
+    python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --er-p "$er_p" --mia-results-root "$RESULTS_DIR" --seed "$seed" --dp --dp-noise "$DP_NOISE" --chunk --chunking-mode "topology_rowblocks" --topology-rowblocks-neighbor-policy "per_neighbor"
     echo ""
   done
 done

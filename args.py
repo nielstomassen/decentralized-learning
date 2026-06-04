@@ -30,9 +30,9 @@ def get_args():
         default='topology_rowblocks',
         choices=['topology_rowblocks', 'topology_flat_degree', 'standard_chunking'],
         dest='chunking_mode',
-        help='topology_rowblocks: split each tensor into d row-blocks (d=degree). '
-        'topology_flat_degree: flatten all float weights, split into d contiguous chunks (like fixed-K but K=d). '
-        'standard_chunking: flatten, K global chunks, same subset to all neighbors. '
+        help='topology_rowblocks: split each tensor into d row-blocks (d=degree). Default mode for topology-aware chunking used in the thesis. '
+        'topology_flat_degree: flatten all float weights, split into d contiguous chunks (like fixed-K but K=d). Topology-aware chunking used for Appendix experiment'
+        'standard_chunking: flatten, K global chunks, same subset to all neighbors. Fixed-K chunking used in the thesis.'
         'Per-neighbor vs broadcast for topology_* modes: --topology-rowblocks-neighbor-policy.',
     )
     parser.add_argument(
@@ -49,8 +49,8 @@ def get_args():
         default='per_neighbor',
         choices=['per_neighbor', 'broadcast_same'],
         dest='topology_rowblocks_neighbor_policy',
-        help='For topology_rowblocks and topology_flat_degree: per_neighbor (default) assigns different chunks per neighbor '
-        '(sliding window over d shuffled blocks). broadcast_same picks min(chunks-per-neighbor, degree) blocks once and sends '
+        help='For topology_rowblocks and topology_flat_degree: per_neighbor (default) assigns different chunks per neighbor (default for thesis)'
+        '(sliding window over d shuffled blocks). broadcast_same picks min(chunks-per-neighbor, degree) blocks once and sends (for appendix experiment)'
         'the same chunks to every neighbor.',
     )
     parser.add_argument('--eval', dest='enable_evaluation', action='store_true', help='Enable evaluation during training (default: disabled).')
@@ -64,11 +64,7 @@ def get_args():
     parser.add_argument('--no-samples', type=int, default=2000, help="Max training images per node before holdout split. IID: cap after equal split. Dirichlet: target per-node count after label-skew allocation.")
     parser.add_argument('--beta', type=float, default = 0.2, help="Controls how strongly each node mixes its model with its neighbors during decentralized averaging. Beta=0 is no communication, beta=1 is full neighbor consensus (ignore own update).")
     parser.add_argument('--message-type', type=str, default="full", choices=['full', 'delta'], help="Type of message sent by nodes to their neighbors; full model or just the model update.")
-    # Add later 
-    # parser.add_argument('--log-level', type=str, default="INFO") 
-    # parser.add_argument('--algorithm', type=str, default="dpsgd", choices=["fl", "dpsgd", "gossip", "super-gossip", "adpsgd", "epidemic", "lubor", "conflux", "teleportation", "shatter"])
-    # parser.add_argument('--validation-set-fraction', type=float, default=0.0)
-    # parser.add_argument('--compute-validation-loss-global-model', action=argparse.BooleanOptionalAction)
+
 
     parser.add_argument(
         "--mia-attack",

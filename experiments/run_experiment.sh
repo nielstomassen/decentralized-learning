@@ -1,4 +1,5 @@
 #!/bin/bash
+# Single experiment run, change hyperparameters as needed
 cd .. # Move to root directory (where main.py lives)
 cleanup() {
     echo "Killing all spawned processes..."

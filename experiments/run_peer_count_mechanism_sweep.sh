@@ -1,5 +1,5 @@
 #!/bin/bash
-# Peer-count sweep: 2×2 mechanism ablation (DP × chunk) at fixed topology.
+# Peer-count sweep: baseline vs topology-aware chunking peer count (appendix experiment)
 # Loops ER_PS (default 0.08 0.16) and PEER_COUNTS (default 10 25 50 75); fixed ER topology only.
 
 set -e
@@ -58,28 +58,19 @@ for er_p in $ER_PS; do
   )
 
     for seed in $SEEDS; do
-      echo "[1/4] No DP, no chunk (baseline)  er_p=$er_p  peers=$peers  seed=$seed"
+      echo "[1/2] No DP, no chunk (baseline)  er_p=$er_p  peers=$peers  seed=$seed"
       python3 -u main.py "${BASE_ARGS[@]}" --mia-results-root "$RESULTS_DIR" --seed "$seed"
       echo ""
 
-      echo "[2/4] DP only  er_p=$er_p  peers=$peers  seed=$seed"
-      python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --mia-results-root "$RESULTS_DIR" --seed "$seed" \
-        --dp --dp-noise "$DP_NOISE" || { echo "ERROR: [2/4] DP-only failed (exit $?)"; exit 1; }
-      echo ""
-
-      echo "[3/4] Chunk only  er_p=$er_p  peers=$peers  seed=$seed"
+      echo "[2/2] Topology-aware chunk only  er_p=$er_p  peers=$peers  seed=$seed"
       python3 -u main.py "${BASE_ARGS[@]}" --mia-results-root "$RESULTS_DIR" --seed "$seed" --chunk \
         --chunking-mode topology_rowblocks --topology-rowblocks-neighbor-policy per_neighbor
       echo ""
 
-      echo "[4/4] DP + chunk (hybrid)  er_p=$er_p  peers=$peers  seed=$seed"
-      python3 -u main.py "${BASE_ARGS[@]}" --batch-size 12 --mia-results-root "$RESULTS_DIR" --seed "$seed" \
-        --dp --dp-noise "$DP_NOISE" --chunk \
-        --chunking-mode topology_rowblocks --topology-rowblocks-neighbor-policy per_neighbor
-      echo ""
+
     done
   done
 done
 
-echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/peers_<n>/ (4 conditions × seeds per er_p × peer count). ==="
+echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/peers_<n>/ (2 conditions × seeds per er_p × peer count). ==="
 echo "Plot: python3 src/plotting/hybrid_privacy_tradeoff.py --results-dir $RESULTS_ROOT/er_p_<p>/peers_<n> --out-dir plots/peer_count/er_p_<p>/peers_<n>"

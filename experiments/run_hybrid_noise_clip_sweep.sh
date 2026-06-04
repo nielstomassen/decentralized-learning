@@ -1,8 +1,8 @@
 #!/bin/bash
-# Run only the hybrid condition (DP + chunk) with same settings as run_hybrid_ablation.sh,
+# Run only the hybrid condition (ChunkDP) with same settings as run_hybrid_ablation.sh,
 # but sweep over noise multiplier and max grad norm to find a sweet spot.
 # Output CSVs go to RESULTS_ROOT/er_p_<p>/; analyze with analyze_hybrid_noise_clip_sweep.py
-
+# Used for ChunkDP noise sweep section in the thesis
 set -e
 cd "$(dirname "$0")/.."
 LOG_DIR=${LOG_DIR:-logs}
@@ -75,4 +75,4 @@ for er_p in $ER_PS; do
 done
 
 echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/ (one file per noise/clip/seed). ==="
-echo "Analyze: python3 scripts/analyze_hybrid_noise_clip_sweep.py --results-dir $RESULTS_ROOT/er_p_0.08 --out-dir plots/hybrid_noise_clip_sweep"
+echo "Analyze: bash scripts/plot_noise_sweep_er008_with_standard_k_refs.sh  (or plotting/hybrid_noise_clip_sweep/analyze_hybrid_noise_clip_sweep.py with --results-glob, --out-dir, --ablation-ref-dir, --er-p)"

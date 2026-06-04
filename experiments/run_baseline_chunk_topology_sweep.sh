@@ -2,7 +2,7 @@
 # Baseline vs chunk-only across topologies and ER p values.
 # Same style as hybrid ablation: 2 conditions (baseline, chunk-only), ~5 seeds per graph.
 # Graphs: ring, star, grid, fully_connected, d-regular (d=3,10,25), ER (p=0.04,0.08,0.16,0.32).
-
+# Used for topology analysis results in the thesis
 set -e
 cd "$(dirname "$0")/.."
 LOG_DIR=${LOG_DIR:-logs}
@@ -13,9 +13,9 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
 # 5 seeds per graph
-SEEDS="${SEEDS:-4235 999 1234 5678 8765}"
+SEEDS="${SEEDS:-42350 9990 1234 5678 8765}"
 BATCH_SIZE=${BATCH_SIZE:-32}
-RESULTS_ROOT=${RESULTS_ROOT:-results/cifar100/baseline_chunk_topology_sweep}
+RESULTS_ROOT=${RESULTS_ROOT:-results/baseline_chunk_topology_sweep}
 EXTRA_ARGS=()
 [[ -n "${TIMING:-}" ]] && [[ "${TIMING}" != "0" ]] && EXTRA_ARGS+=(--time-rounds)
 [[ -n "${DEVICE:-}" ]] && EXTRA_ARGS+=(--device "$DEVICE")
