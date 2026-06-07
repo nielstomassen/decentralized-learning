@@ -25,14 +25,14 @@ Outputs
 
 Usage (er_p=0.08; repeat for 0.16 and each K)::
 
-  python plotting/hybrid_ablation/hybrid_privacy_tradeoff.py \\
-    --results-dir results/hybrid_ablation/er_p_0.08 \\
-    --additional-results-dir synced/results/fixed_k_chunking_sweep/8_standard_chunking_sweep/er_p_0.08 \\
-    --additional-results-dir synced/results/fixed_k_chunking_sweep/16_standard_chunking_sweep/er_p_0.08 \\
-    --additional-results-dir synced/results/fixed_k_chunking_sweep/32_standard_chunking_sweep/er_p_0.08 \\
-    --additional-results-dir synced/results/fixed_k_chunking_sweep/64_standard_chunking_sweep/er_p_0.08 \\
-    --additional-results-dir synced/results/fixed_k_chunking_sweep/128_standard_chunking_sweep/er_p_0.08 \\
-    --out-dir plots/hybrid_ablation_with_all_standard_k/er_p_0.08 \\
+  python3 -m plotting.hybrid_ablation.hybrid_privacy_tradeoff \
+    --results-dir results/hybrid_ablation/er_p_0.08 \
+    --additional-results-dir results/fixed_k_chunking_sweep/8_standard_chunking_sweep/er_p_0.08 \
+    --additional-results-dir results/fixed_k_chunking_sweep/16_standard_chunking_sweep/er_p_0.08 \
+    --additional-results-dir results/fixed_k_chunking_sweep/32_standard_chunking_sweep/er_p_0.08 \
+    --additional-results-dir results/fixed_k_chunking_sweep/64_standard_chunking_sweep/er_p_0.08 \
+    --additional-results-dir results/fixed_k_chunking_sweep/128_standard_chunking_sweep/er_p_0.08 \
+    --out-dir plots/hybrid_ablation/er_p_0.08 \
     --lambda 0.5 --auc-col max_auc
 """
 
@@ -40,17 +40,12 @@ import argparse
 import os
 import re
 import sys
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-_PKG_DIR = Path(__file__).resolve().parent
-if str(_PKG_DIR) not in sys.path:
-    sys.path.insert(0, str(_PKG_DIR))
-
-from chunkdp_labels import (
+from plotting.hybrid_ablation.chunkdp_labels import (
     CHUNKDP_CONDITION,
     auc_metric_title_suffix,
     chunkdp_xtick_label,
@@ -60,7 +55,7 @@ from chunkdp_labels import (
     node_mia_auc_axis_label,
     normalize_condition_label,
 )
-from hybrid_lambda_deployment_scores import (
+from plotting.hybrid_ablation.hybrid_lambda_deployment_scores import (
     export_ablation_lambda_table,
     plot_ablation_grouped_three_lambdas,
 )

@@ -5,10 +5,10 @@ Same per-seed aggregation as ``hybrid_privacy_tradeoff`` (last round, mean over 
 then mean ± std across seeds). Excludes ``_cmstd`` files from the normal ablation directory.
 
 Example:
-  python -m plotting.normal_vs_broadcast_same_ta_hybrid \\
-    --factorial-root results/hybrid_ablation \\
-    --broadcast-root results/appendix/flatBroadcastSame \\
-    --out-path plots/appendix/broadcastSame/normal_vs_broadcast_same_ta_hybrid.png
+  python3 -m plotting.appendix.normal_vs_broadcast_same_ta_hybrid \
+    --factorial-root results/hybrid_ablation \
+    --broadcast-root results/appendix/flatBroadcastSame \
+    --out-path plots/appendix/chunk_variant/normal_vs_broadcast_same_ta_hybrid.png
 
 Writes ``<stem>_comparison.csv`` next to the figure (means, SEs, broadcast−normal differences).
 """
@@ -28,7 +28,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from src.plotting.chunkdp_labels import (  # noqa: E402
+from plotting.hybrid_ablation.chunkdp_labels import (  # noqa: E402
     CHUNKDP_CONDITION,
     mean_accuracy_axis_label,
     mean_mia_auc_axis_label,
@@ -36,7 +36,7 @@ from src.plotting.chunkdp_labels import (  # noqa: E402
 
 NORMAL_STYLE_LABEL = "Normal"
 TA_CONDITION = "Topology-aware chunking"
-from src.plotting.hybrid_privacy_tradeoff import (  # noqa: E402
+from plotting.hybrid_ablation.hybrid_privacy_tradeoff import (  # noqa: E402
     CMSTD_REGEX,
     CHUNK_REGEX,
     DP_REGEX,

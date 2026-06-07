@@ -10,8 +10,8 @@ figures with peer count as an additional grouping dimension:
   - Deployment scores S_λ for λ∈{0.25, 0.5, 0.75}, faceted by condition.
 
 Usage:
-  python3 -m plotting.peer_count_mechanism_sweep \\
-      --results-root results/appendix/peer_count_mechanism_sweep/er_p_0.08 \\
+  python3 -m plotting.appendix.peer_count_mechanism_sweep \
+      --results-root results/appendix/peer_count_mechanism_sweep/er_p_0.08 \
       --out-dir plots/appendix/peer_count_mechanism_sweep/er_p_0.08
 """
 
@@ -31,7 +31,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from src.plotting.chunkdp_labels import (
+from plotting.hybrid_ablation.chunkdp_labels import (
     CHUNKDP_CONDITION,
     auc_metric_title_suffix,
     chunkdp_xtick_label,
@@ -39,12 +39,12 @@ from src.plotting.chunkdp_labels import (
     mean_mia_auc_axis_label,
     normalize_condition_label,
 )
-from src.plotting.hybrid_lambda_deployment_scores import (
+from plotting.hybrid_ablation.hybrid_lambda_deployment_scores import (
     DEFAULT_LAMBDAS,
     deployment_score,
     export_ablation_lambda_table,
 )
-from src.plotting.hybrid_privacy_tradeoff import (
+from plotting.hybrid_ablation.hybrid_privacy_tradeoff import (
     _save_fig,
     condition_label,
     load_and_label,

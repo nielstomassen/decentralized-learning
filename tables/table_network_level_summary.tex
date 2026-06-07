@@ -1,0 +1,44 @@
+\begin{table*}[t]
+  \centering
+  \caption{Network-level summary: for each topology and training mode, global test accuracy and mean node-level MIA AUC (\emph{max} and \emph{avg}), each averaged over all $N$ peers in the final round, then reported as mean $\pm$ std across seeds.}
+  \label{tab:network_level_summary}
+  \small
+  \begin{tabular}{@{}l l ccc@{}}
+    \toprule
+    Topology & Mode & Accuracy & AUC$_{\text{max}}$ & AUC$_{\text{avg}}$ \\
+    \midrule
+    Ring & Baseline & 0.429 $\pm$ 0.009 & 0.988 $\pm$ 0.002 & 0.988 $\pm$ 0.002 \\
+     & Chunking & 0.416 $\pm$ 0.006 & 0.966 $\pm$ 0.002 & 0.957 $\pm$ 0.002 \\
+    \midrule
+    Star & Baseline & 0.425 $\pm$ 0.007 & 0.976 $\pm$ 0.002 & 0.976 $\pm$ 0.002 \\
+     & Chunking & 0.274 $\pm$ 0.004 & 0.992 $\pm$ 0.002 & 0.992 $\pm$ 0.002 \\
+    \midrule
+    Grid & Baseline & 0.464 $\pm$ 0.011 & 0.976 $\pm$ 0.001 & 0.976 $\pm$ 0.002 \\
+     & Chunking & 0.441 $\pm$ 0.005 & 0.867 $\pm$ 0.004 & 0.831 $\pm$ 0.005 \\
+    \midrule
+    Fully connected & Baseline & 0.492 $\pm$ 0.007 & 0.969 $\pm$ 0.002 & 0.969 $\pm$ 0.002 \\
+     & Chunking & 0.464 $\pm$ 0.005 & 0.609 $\pm$ 0.008 & 0.556 $\pm$ 0.007 \\
+    \midrule
+    $3$-regular & Baseline & 0.481 $\pm$ 0.008 & 0.980 $\pm$ 0.002 & 0.980 $\pm$ 0.002 \\
+     & Chunking & 0.445 $\pm$ 0.005 & 0.883 $\pm$ 0.003 & 0.851 $\pm$ 0.005 \\
+    \midrule
+    $10$-regular & Baseline & 0.482 $\pm$ 0.009 & 0.969 $\pm$ 0.002 & 0.969 $\pm$ 0.002 \\
+     & Chunking & 0.462 $\pm$ 0.007 & 0.673 $\pm$ 0.004 & 0.632 $\pm$ 0.004 \\
+    \midrule
+    $25$-regular & Baseline & 0.491 $\pm$ 0.004 & 0.970 $\pm$ 0.003 & 0.970 $\pm$ 0.003 \\
+     & Chunking & 0.466 $\pm$ 0.004 & 0.621 $\pm$ 0.006 & 0.578 $\pm$ 0.006 \\
+    \midrule
+    ER ($p=0.04$) & Baseline & 0.465 $\pm$ 0.007 & 0.975 $\pm$ 0.002 & 0.975 $\pm$ 0.002 \\
+     & Chunking & 0.409 $\pm$ 0.003 & 0.872 $\pm$ 0.004 & 0.796 $\pm$ 0.005 \\
+    \midrule
+    ER ($p=0.08$) & Baseline & 0.481 $\pm$ 0.009 & 0.971 $\pm$ 0.002 & 0.971 $\pm$ 0.002 \\
+     & Chunking & 0.454 $\pm$ 0.008 & 0.733 $\pm$ 0.005 & 0.666 $\pm$ 0.005 \\
+    \midrule
+    ER ($p=0.16$) & Baseline & 0.489 $\pm$ 0.004 & 0.970 $\pm$ 0.002 & 0.970 $\pm$ 0.002 \\
+     & Chunking & 0.459 $\pm$ 0.005 & 0.643 $\pm$ 0.004 & 0.600 $\pm$ 0.005 \\
+    \midrule
+    ER ($p=0.32$) & Baseline & 0.492 $\pm$ 0.008 & 0.970 $\pm$ 0.002 & 0.970 $\pm$ 0.002 \\
+     & Chunking & 0.461 $\pm$ 0.006 & 0.616 $\pm$ 0.006 & 0.572 $\pm$ 0.007 \\
+    \bottomrule
+  \end{tabular}
+\end{table*}

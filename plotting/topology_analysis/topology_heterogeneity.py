@@ -15,9 +15,9 @@ Outputs:
   tables/*.tex  (booktabs tables for \\input)
 
 Usage:
-  python3 -m plotting/topology_analysis/topology_heterogeneity \\
-    --root results/topology_analysis \\
-    --out-dir-figures plots \\
+  python3 -m plotting.topology_analysis.topology_heterogeneity \
+    --root results/topology_analysis \
+    --out-dir-figures plots/topology_analysis/heterogeneity \
     --out-dir-tables tables
 """
 

@@ -2,18 +2,16 @@
 """
 Draw communication topology graphs for the thesis (PDFs).
 Usage: from project root, run
-    python scripts/draw_thesis_topologies.py
-Output: plots/graphs/ring.pdf, fully_connected.pdf, er.pdf, star.pdf, grid.pdf, regular.pdf
+    python3 -m plotting.misc.draw_thesis_topologies
+Output: plots/misc/ring.pdf, fully_connected.pdf, er.pdf, star.pdf, grid.pdf, regular.pdf
 """
 
-import os
 import sys
+from pathlib import Path
 
-# Run from project root
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import matplotlib
 matplotlib.use("Agg")
@@ -21,22 +19,21 @@ import matplotlib.pyplot as plt
 
 from src.topologies.topology_factory import TopologyFactory
 
-# Output directory (relative to project root)
-OUT_DIR = os.path.join("plots", "graphs")
+OUT_DIR = _REPO_ROOT / "plots" / "misc"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 # Small illustrative graphs: 8--12 nodes
 N = 10
 GRID_N = 12  # 3x4 grid
 SEED = 42
 
 def draw_and_save(topology, filename: str):
-    path = os.path.join(OUT_DIR, filename)
-    topology.draw(title=None, save_path=path)
+    path = OUT_DIR / filename
+    topology.draw(title=None, save_path=str(path))
     plt.close("all")
     print(f"  {path}")
 
 
 def main():
-    os.makedirs(OUT_DIR, exist_ok=True)
     print("Writing topology PDFs to", OUT_DIR)
 
     # Ring

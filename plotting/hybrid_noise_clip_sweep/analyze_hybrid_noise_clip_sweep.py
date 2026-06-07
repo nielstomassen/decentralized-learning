@@ -27,10 +27,10 @@ Outputs
 
 Usage::
 
-  python plotting/hybrid_noise_clip_sweep/analyze_hybrid_noise_clip_sweep.py \\
-    --results-glob 'results/hybrid_nosie_clip_sweep/er_p_0.08/*.csv' \\
-    --out-dir plots/noise_sweep_with_standard_k_refs/er_p_0.08 \\
-    --ablation-ref-dir results/hybrid_ablation/er_p_0.08 \\
+  python3 -m plotting.hybrid_noise_clip_sweep.analyze_hybrid_noise_clip_sweep \
+    --results-glob 'results/hybrid_noise_clip_sweep/er_p_0.08/*.csv' \
+    --out-dir plots/hybrid_noise_clip_sweep/er_p_0.08 \
+    --ablation-ref-dir results/hybrid_ablation/er_p_0.08 \
     --er-p 0.08 --lambda 0.5 --auc-col max_auc
 """
 
@@ -40,17 +40,13 @@ import argparse
 import glob as glob_module
 import os
 import re
-import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_HYBRID_ABLATION_DIR = Path(__file__).resolve().parents[1] / "hybrid_ablation"
-for _p in (_REPO_ROOT, _HYBRID_ABLATION_DIR):
-    if str(_p) not in sys.path:
-        sys.path.insert(0, str(_p))
 
 # Fixed-K chunking reference directories (scatter diamonds + λ-panel refs).
 # Selected by --er-p; edit here if result roots move.
@@ -71,18 +67,18 @@ FIXED_K_REF_DIRS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-from chunkdp_labels import (
+from plotting.hybrid_ablation.chunkdp_labels import (
     auc_metric_title_suffix,
     mean_accuracy_axis_label,
     mean_mia_auc_axis_label,
 )
-from hybrid_lambda_deployment_scores import (
+from plotting.hybrid_ablation.hybrid_lambda_deployment_scores import (
     export_sweep_lambda_optima_meta,
     export_sweep_lambda_table,
     plot_noise_sweep_three_lambdas,
     plot_sweep_optima_grouped_three_lambdas,
 )
-from hybrid_privacy_tradeoff import load_and_label as load_ablation_csv
+from plotting.hybrid_ablation.hybrid_privacy_tradeoff import load_and_label as load_ablation_csv
 
 
 def _save_fig(fig, path_png: str, dpi: int = 150) -> None:
@@ -380,7 +376,7 @@ def main():
     )
     by_config = by_config.reset_index(drop=True)
     by_config["privacy_risk"] = np.maximum(0, 2 * by_config["mean_auc"] - 1)
-
+    os.makedirs(args.out_dir, exist_ok=True)
     lam_csv = os.path.join(args.out_dir, "hybrid_noise_clip_sweep_lambda_scores.csv")
     export_sweep_lambda_table(by_config, lam_csv)
     print(f"Saved multi-λ scores: {lam_csv}")

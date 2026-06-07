@@ -3,25 +3,20 @@
 Chunking schematic for thesis: sender splits each tensor into d chunks;
 chunk order permuted per row (no fixed column→neighbor); one receiver
 gets same color (same chunk index) to show random assignment.
-Usage: python scripts/draw_chunking_schematic.py
+Usage: python3 -m plotting.misc.draw_chunking_schematic
 Output: plots/misc/chunking_schematic.pdf
 """
 
-import os
-import sys
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
+from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-OUT_DIR = os.path.join("plots", "misc")
-os.makedirs(OUT_DIR, exist_ok=True)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+OUT_DIR = _REPO_ROOT / "plots" / "misc"
+OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 NUM_TENSORS = 3
 D = 3
@@ -116,7 +111,7 @@ def main():
     ax.set_xlim(-0.12, rx + rw + 0.25)
     ax.set_ylim(caption_y - 0.2, 0.25 + sender_h + 0.25)
 
-    out_path = os.path.join(OUT_DIR, "chunking_schematic.pdf")
+    out_path = OUT_DIR / "chunking_schematic.pdf"
     plt.savefig(out_path, bbox_inches="tight", pad_inches=0.5, format="pdf")
     plt.close()
     print(f"Saved {out_path}")

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from chunkdp_labels import (
+from plotting.hybrid_ablation.chunkdp_labels import (
     CHUNKDP_CONDITION,
     chunkdp_xtick_label,
     deployment_score_xlabel,

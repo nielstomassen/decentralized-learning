@@ -1,0 +1,29 @@
+\begin{table}[t]
+  \centering
+  \caption{Graphs with homogeneous node distribution using per-node \emph{max} MIA AUC. \textbf{Column~3:} in each run, mean $\mathrm{MIA}^{\max}$ over peers; reported value is mean $\pm$ \emph{std across random seeds} (seed-to-seed variability of the network mean). \textbf{Column~4:} in each run, population SD of $\mathrm{MIA}^{\max}$ across the $N$ peers; reported value is mean $\pm$ \emph{std across seeds} of that within-run spread (how peer-level spread itself shifts from seed to seed).}
+  \label{tab:homogeneous_spread}
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{@{}l l cc@{}}
+    \toprule
+    Topology & Mode & Net mean $\mathrm{MIA}^{\max}$ & Within-run SD (nodes) \\
+    \midrule
+    Ring & Baseline & 0.988 $\pm$ 0.002 & 0.019 $\pm$ 0.009 \\
+     & Chunking & 0.966 $\pm$ 0.002 & 0.018 $\pm$ 0.001 \\
+    \midrule
+    Fully conn. & Baseline & 0.969 $\pm$ 0.002 & 0.015 $\pm$ 0.002 \\
+     & Chunking & 0.609 $\pm$ 0.008 & 0.021 $\pm$ 0.003 \\
+    \midrule
+    $3$-regular & Baseline & 0.980 $\pm$ 0.002 & 0.017 $\pm$ 0.002 \\
+     & Chunking & 0.883 $\pm$ 0.003 & 0.034 $\pm$ 0.002 \\
+    \midrule
+    $10$-regular & Baseline & 0.969 $\pm$ 0.002 & 0.016 $\pm$ 0.002 \\
+     & Chunking & 0.673 $\pm$ 0.004 & 0.030 $\pm$ 0.003 \\
+    \midrule
+    $25$-regular & Baseline & 0.970 $\pm$ 0.003 & 0.015 $\pm$ 0.001 \\
+     & Chunking & 0.621 $\pm$ 0.006 & 0.025 $\pm$ 0.003 \\
+    \bottomrule
+  \end{tabular}%
+  }
+\end{table}

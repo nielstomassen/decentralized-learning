@@ -1,0 +1,16 @@
+\begin{table}[t]
+  \centering
+  \caption{Star topology: hub (degree $N{-}1$) vs.\ leaves (degree $1$). Values are mean $\pm$ std across five random seeds; within each seed, metrics are averaged over nodes in the role.}
+  \label{tab:star_hub_leaf}
+  \begin{tabular}{@{}l l ccc@{}}
+    \toprule
+    Mode & Role & Accuracy & MIA AUC (avg) & MIA AUC (max mean)\tabularnewline
+    \midrule
+    Baseline & Hub & 0.578 $\pm$ 0.008 & 0.978 $\pm$ 0.016 & 0.978 $\pm$ 0.016\tabularnewline
+    Baseline & Leaves & 0.423 $\pm$ 0.007 & 0.976 $\pm$ 0.002 & 0.976 $\pm$ 0.002\tabularnewline
+    \midrule
+    Chunking & Hub & 0.298 $\pm$ 0.023 & 0.546 $\pm$ 0.009 & 0.612 $\pm$ 0.015\tabularnewline
+    Chunking & Leaves & 0.274 $\pm$ 0.004 & 0.996 $\pm$ 0.002 & 0.996 $\pm$ 0.002\tabularnewline
+    \bottomrule
+  \end{tabular}
+\end{table}

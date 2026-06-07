@@ -11,9 +11,9 @@ Outputs (PDF + PNG):
   - topology_er_by_p.{pdf,png}  (ER sweep vs. edge probability p, if ER folders exist)
 
 Usage:
-  python3 -m plotting/topology_analysis/topology_mia_chunk_sweep \\
-    --root results/topology_analysis \\
-    --out-dir plots
+  python3 -m plotting.topology_analysis.topology_mia_chunk_sweep \
+    --root results/topology_analysis \
+    --out-dir plots/topology_analysis
 """
 
 from __future__ import annotations

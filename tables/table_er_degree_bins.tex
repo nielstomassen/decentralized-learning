@@ -1,0 +1,51 @@
+\begin{table*}[t]
+\centering
+\caption{Erd\H{o}s--R\'enyi graphs: node groups by degree bin for different edge probabilities $p$. Each entry averages over nodes in the bin. Bins with fewer than three nodes in a run are omitted.}
+\label{tab:er_degree_bins_all}
+\begin{tabular}{@{}c l l ccc@{}}
+\toprule
+$p$ & Mode & Degree bin & Accuracy & AUC$_{\text{avg}}$ & AUC$_{\text{max}}$ \\
+\midrule
+
+\multirow{8}{*}{0.04} & Baseline & 1 & 0.451 $\pm$ 0.006 & 0.978 $\pm$ 0.001 & 0.978 $\pm$ 0.001 \\
+& Baseline & 2 & 0.464 $\pm$ 0.008 & 0.977 $\pm$ 0.002 & 0.977 $\pm$ 0.002 \\
+& Baseline & 3 & 0.468 $\pm$ 0.009 & 0.971 $\pm$ 0.004 & 0.971 $\pm$ 0.004 \\
+& Baseline & $\geq 4$ & 0.480 $\pm$ 0.010 & 0.976 $\pm$ 0.004 & 0.976 $\pm$ 0.005 \\
+& Chunking & 1 & 0.389 $\pm$ 0.007 & 0.996 $\pm$ 0.002 & 0.996 $\pm$ 0.002 \\
+& Chunking & 2 & 0.418 $\pm$ 0.007 & 0.894 $\pm$ 0.009 & 0.930 $\pm$ 0.007 \\
+& Chunking & 3 & 0.429 $\pm$ 0.005 & 0.805 $\pm$ 0.009 & 0.875 $\pm$ 0.008 \\
+& Chunking & $\geq 4$ & 0.412 $\pm$ 0.003 & 0.717 $\pm$ 0.004 & 0.824 $\pm$ 0.005 \\
+\midrule
+
+\multirow{8}{*}{0.08} & Baseline & 2--5 & 0.473 $\pm$ 0.014 & 0.971 $\pm$ 0.003 & 0.971 $\pm$ 0.003 \\
+& Baseline & 6--8 & 0.483 $\pm$ 0.005 & 0.970 $\pm$ 0.003 & 0.970 $\pm$ 0.003 \\
+& Baseline & 9--10 & 0.484 $\pm$ 0.012 & 0.971 $\pm$ 0.005 & 0.971 $\pm$ 0.005 \\
+& Baseline & $\geq 11$ & 0.477 $\pm$ 0.016 & 0.972 $\pm$ 0.006 & 0.972 $\pm$ 0.005 \\
+& Chunking & 2--5 & 0.482 $\pm$ 0.016 & 0.747 $\pm$ 0.008 & 0.801 $\pm$ 0.010 \\
+& Chunking & 6--8 & 0.457 $\pm$ 0.009 & 0.667 $\pm$ 0.005 & 0.731 $\pm$ 0.003 \\
+& Chunking & 9--10 & 0.441 $\pm$ 0.006 & 0.639 $\pm$ 0.004 & 0.718 $\pm$ 0.008 \\
+& Chunking & $\geq 11$ & 0.442 $\pm$ 0.016 & 0.614 $\pm$ 0.012 & 0.675 $\pm$ 0.015 \\
+\midrule
+
+\multirow{8}{*}{0.16} & Baseline & 7--11 & 0.481 $\pm$ 0.017 & 0.973 $\pm$ 0.003 & 0.973 $\pm$ 0.003 \\
+& Baseline & 12--15 & 0.487 $\pm$ 0.004 & 0.970 $\pm$ 0.002 & 0.970 $\pm$ 0.001 \\
+& Baseline & 16--19 & 0.495 $\pm$ 0.004 & 0.971 $\pm$ 0.003 & 0.971 $\pm$ 0.003 \\
+& Baseline & $\geq 20$ & 0.489 $\pm$ 0.014 & 0.969 $\pm$ 0.004 & 0.969 $\pm$ 0.004 \\
+& Chunking & 7--11 & 0.468 $\pm$ 0.019 & 0.622 $\pm$ 0.014 & 0.668 $\pm$ 0.014 \\
+& Chunking & 12--15 & 0.464 $\pm$ 0.006 & 0.603 $\pm$ 0.005 & 0.645 $\pm$ 0.003 \\
+& Chunking & 16--19 & 0.455 $\pm$ 0.004 & 0.595 $\pm$ 0.004 & 0.639 $\pm$ 0.004 \\
+& Chunking & $\geq 20$ & 0.447 $\pm$ 0.008 & 0.587 $\pm$ 0.006 & 0.629 $\pm$ 0.009 \\
+\midrule
+
+\multirow{8}{*}{0.32} & Baseline & 20--26 & 0.489 $\pm$ 0.019 & 0.973 $\pm$ 0.004 & 0.973 $\pm$ 0.004 \\
+& Baseline & 27--31 & 0.492 $\pm$ 0.008 & 0.970 $\pm$ 0.003 & 0.970 $\pm$ 0.003 \\
+& Baseline & 32--36 & 0.494 $\pm$ 0.009 & 0.970 $\pm$ 0.002 & 0.970 $\pm$ 0.002 \\
+& Baseline & $\geq 37$ & 0.487 $\pm$ 0.019 & 0.966 $\pm$ 0.004 & 0.967 $\pm$ 0.004 \\
+& Chunking & 20--26 & 0.476 $\pm$ 0.011 & 0.578 $\pm$ 0.006 & 0.621 $\pm$ 0.005 \\
+& Chunking & 27--31 & 0.462 $\pm$ 0.008 & 0.574 $\pm$ 0.008 & 0.618 $\pm$ 0.007 \\
+& Chunking & 32--36 & 0.460 $\pm$ 0.007 & 0.569 $\pm$ 0.007 & 0.614 $\pm$ 0.007 \\
+& Chunking & $\geq 37$ & 0.451 $\pm$ 0.012 & 0.566 $\pm$ 0.006 & 0.609 $\pm$ 0.006 \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
