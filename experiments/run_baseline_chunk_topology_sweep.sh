@@ -13,7 +13,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
 # 5 seeds per graph
-SEEDS="${SEEDS:-42350 9990 1234 5678 8765}"
+SEEDS="${SEEDS:-4235 999 1234 5678 8765}"
 BATCH_SIZE=${BATCH_SIZE:-32}
 RESULTS_ROOT=${RESULTS_ROOT:-results/baseline_chunk_topology_sweep}
 EXTRA_ARGS=()
@@ -98,4 +98,6 @@ for er_p in 0.04 0.08 0.16 0.32; do
 done
 
 echo "=== Done. CSVs in $RESULTS_ROOT/<topo>/ (baseline and chunk-only, 5 seeds each). ==="
-echo "Plot per topology: python3 src/plotting/hybrid_privacy_tradeoff.py --results-dir $RESULTS_ROOT/<topo> --out-dir plots/baseline_chunk_<topo>"
+echo "Plot:"
+echo "  python3 -m plotting.topology_analysis.topology_mia_chunk_sweep --root $RESULTS_ROOT --out-dir plots/topology_analysis"
+echo "  python3 -m plotting.topology_analysis.topology_heterogeneity --root $RESULTS_ROOT --out-dir-figures plots/topology_analysis/heterogeneity --out-dir-tables tables"

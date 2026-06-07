@@ -41,8 +41,8 @@ BASE_ARGS=(
   --alpha 0.3
   --weight-decay 0
   --message-type "full"
-  --mia-measurement-number 400
-  --no-samples 400
+  --mia-measurement-number 1000
+  --no-samples 1000
   --eval-top-k 5
   "${EXTRA_ARGS[@]}"
 )
@@ -80,4 +80,12 @@ for er_p in $ER_PS; do
 done
 
 echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p> (one file per condition per seed per er_p). ==="
-echo "Plot per er_p (averages over seeds): python3 src/plotting/hybrid_privacy_tradeoff.py --results-dir $RESULTS_ROOT/er_p_<p> --out-dir plots/hybrid"
+echo "Plot per er_p (repeat for each p in ER_PS; add --additional-results-dir for each fixed-K sweep):"
+echo "  python3 -m plotting.hybrid_ablation.hybrid_privacy_tradeoff \\"
+echo "    --results-dir $RESULTS_ROOT/er_p_<p> \\"
+echo "    --additional-results-dir results/fixed_k_chunking_sweep/8_standard_chunking_sweep/er_p_<p> \\"
+echo "    --additional-results-dir results/fixed_k_chunking_sweep/16_standard_chunking_sweep/er_p_<p> \\"
+echo "    --additional-results-dir results/fixed_k_chunking_sweep/32_standard_chunking_sweep/er_p_<p> \\"
+echo "    --additional-results-dir results/fixed_k_chunking_sweep/64_standard_chunking_sweep/er_p_<p> \\"
+echo "    --additional-results-dir results/fixed_k_chunking_sweep/128_standard_chunking_sweep/er_p_<p> \\"
+echo "    --out-dir plots/hybrid_ablation/er_p_<p> --lambda 0.5 --auc-col max_auc"

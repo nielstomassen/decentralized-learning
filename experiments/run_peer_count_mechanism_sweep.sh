@@ -73,4 +73,7 @@ for er_p in $ER_PS; do
 done
 
 echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/peers_<n>/ (2 conditions × seeds per er_p × peer count). ==="
-echo "Plot: python3 src/plotting/hybrid_privacy_tradeoff.py --results-dir $RESULTS_ROOT/er_p_<p>/peers_<n> --out-dir plots/peer_count/er_p_<p>/peers_<n>"
+echo "Plot per er_p (repeat for each p in ER_PS):"
+echo "  python3 -m plotting.appendix.peer_count_mechanism_sweep \\"
+echo "    --results-root $RESULTS_ROOT/er_p_<p> \\"
+echo "    --out-dir plots/appendix/peer_count_mechanism_sweep/er_p_<p>"

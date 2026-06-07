@@ -1,7 +1,7 @@
 #!/bin/bash
-# Fixed-K chunking
-# Maps er_p -> global K: 0.08 -> 8, 0.16 -> 16. Change K for different values of K of fixed-K chunking
-# Outer loop: seeds; inner loop: ER p. Same non-chunking hyperparameters as run_hybrid_ablation.sh 
+# Fixed-K chunking sweep: K ∈ {8, 16, 32, 64, 128} × er_p × seeds (no DP).
+# Output: results/fixed_k_chunking_sweep/<K>_standard_chunking_sweep/er_p_<p>/
+# Same non-chunking hyperparameters as run_hybrid_ablation.sh
 
 set -e
 cd "$(dirname "$0")/.."
@@ -14,6 +14,7 @@ ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
 SEEDS="${SEEDS:-4235 45 929 9838 12}"
 ER_PS="${ER_PS:-0.08 0.16}"
+K_VALUES="${K_VALUES:-8 16 32 64 128}"
 RESULTS_ROOT=${RESULTS_ROOT:-results/fixed_k_chunking_sweep}
 BATCH_SIZE=${BATCH_SIZE:-32}
 EXTRA_ARGS=()
@@ -43,36 +44,34 @@ BASE_ARGS=(
   "${EXTRA_ARGS[@]}"
 )
 
-echo "=== Standard chunking sweep (no DP) — seeds outer, er_p inner ==="
+echo "=== Fixed-K chunking sweep (no DP) — K × er_p × seeds ==="
 echo "  RESULTS_ROOT=$RESULTS_ROOT  ROUNDS=$ROUNDS  PEERS=$PEERS  BATCH_SIZE=$BATCH_SIZE"
-echo "  ER_PS=$ER_PS  SEEDS=$SEEDS  TIMING=${TIMING:-0}  DEVICE=${DEVICE:-auto}"
+echo "  K_VALUES=$K_VALUES  ER_PS=$ER_PS  SEEDS=$SEEDS  TIMING=${TIMING:-0}  DEVICE=${DEVICE:-auto}"
 echo ""
 
-for seed in $SEEDS; do
-  echo "======== seed=$seed ========"
-
+total=$(( $(echo $K_VALUES | wc -w) * $(echo $ER_PS | wc -w) * $(echo $SEEDS | wc -w) ))
+n=0
+for global_k in $K_VALUES; do
   for er_p in $ER_PS; do
-    case "$er_p" in
-      0.08) GLOBAL_K=8 ;; # change to 16,32,64,128 for different values of K of fixed-K chunking
-      0.16) GLOBAL_K=16 ;; # change to 8,32,64,128 for different values of K of fixed-K chunking
-      *)
-        echo "WARN: er_p=$er_p not in {0.08,0.16}; using GLOBAL_K=8"
-        GLOBAL_K=8
-        ;;
-    esac
-    RESULTS_DIR="${RESULTS_ROOT}/er_p_${er_p}"
+    RESULTS_DIR="${RESULTS_ROOT}/${global_k}_standard_chunking_sweep/er_p_${er_p}"
     mkdir -p "$RESULTS_DIR"
-    echo "[standard_chunking] er_p=$er_p  global_k=$GLOBAL_K  seed=$seed  -> $RESULTS_DIR"
-    python3 -u main.py "${BASE_ARGS[@]}" \
-      --er-p "$er_p" \
-      --mia-results-root "$RESULTS_DIR" \
-      --seed "$seed" \
-      --chunk \
-      --chunking-mode standard_chunking \
-      --standard-chunking-global-k "$GLOBAL_K"
-    echo ""
+    echo "--- K=$global_k  er_p=$er_p  RESULTS_DIR=$RESULTS_DIR ---"
+
+    for seed in $SEEDS; do
+      n=$((n + 1))
+      echo "[$n/$total] standard_chunking  K=$global_k  er_p=$er_p  seed=$seed"
+      python3 -u main.py "${BASE_ARGS[@]}" \
+        --er-p "$er_p" \
+        --mia-results-root "$RESULTS_DIR" \
+        --seed "$seed" \
+        --chunk \
+        --chunking-mode standard_chunking \
+        --standard-chunking-global-k "$global_k"
+      echo ""
+    done
   done
 done
 
-echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/ (one run per seed per er_p). ==="
-echo "Plot (per er_p, averages over seeds): python3 src/plotting/hybrid_privacy_tradeoff.py --results-dir $RESULTS_ROOT/er_p_<p> --out-dir plots/hybrid"
+echo "=== Done. CSVs in $RESULTS_ROOT/<K>_standard_chunking_sweep/er_p_<p>/ (one run per seed per K × er_p). ==="
+echo "Use as fixed-K refs in hybrid plots (--additional-results-dir or auto via --er-p in analyze_hybrid_noise_clip_sweep.py)."
+echo "  See run_hybrid_ablation.sh / README for full hybrid_privacy_tradeoff command."

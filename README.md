@@ -33,18 +33,22 @@ The [`results/`](results/) tree holds the CSV logs used for the main results in 
 | [`results/topology_analysis/`](results/topology_analysis/) | [`experiments/run_baseline_chunk_topology_sweep.sh`](experiments/run_baseline_chunk_topology_sweep.sh) | Baseline vs topology-aware chunking across ring, star, grid, full, *d*-regular, and ER graphs |
 | [`results/hybrid_ablation/`](results/hybrid_ablation/) | [`experiments/run_hybrid_ablation.sh`](experiments/run_hybrid_ablation.sh) | 2×2 factorial: baseline, DP only, topology-aware chunk, ChunkDP (ER *p* ∈ {0.08, 0.16}) |
 | [`results/hybrid_noise_clip_sweep/`](results/hybrid_noise_clip_sweep/) | [`experiments/run_hybrid_noise_clip_sweep.sh`](experiments/run_hybrid_noise_clip_sweep.sh) | ChunkDP with varying noise multiplier and clip norm |
-| [`results/fixed_k_chunking_sweep/`](results/fixed_k_chunking_sweep/) | [`experiments/run_fixed_k_chunking_sweep.sh`](experiments/run_fixed_k_chunking_sweep.sh) | Fixed-*K* chunking reference runs (K ∈ {8, 16, 32, 64, 128} per `*_standard_chunking_sweep/er_p_*`) |
+| [`results/fixed_k_chunking_sweep/`](results/fixed_k_chunking_sweep/) | [`experiments/run_fixed_k_chunking_sweep.sh`](experiments/run_fixed_k_chunking_sweep.sh) | Fixed-*K* chunking (no DP) for K ∈ {8, 16, 32, 64, 128} × ER *p* × seeds; CSVs under `<K>_standard_chunking_sweep/er_p_*` |
 | [`results/appendix/peer_count_mechanism_sweep/`](results/appendix/peer_count_mechanism_sweep/) | [`experiments/run_peer_count_mechanism_sweep.sh`](experiments/run_peer_count_mechanism_sweep.sh) | ChunkDP ablation vs number of peers |
-| [`results/appendix/flatBroadcastSame/`](results/appendix/flatBroadcastSame/) | (manual / variant runs) | Topology-aware chunking with same chunks broadcast to all neighbors |
+| [`results/appendix/flatBroadcastSame/`](results/appendix/flatBroadcastSame/) | [`experiments/run_chunk_variant.sh`](experiments/run_chunk_variant.sh) | Appendix chunk variant: topology-aware chunk + ChunkDP with `broadcast_same` (`topology_flat_degree`); compared to normal ablation in `normal_vs_broadcast_same_ta_hybrid.py` |
 
-To reproduce CSVs from scratch, run the matching script from the repo root (requires lot of time):
+To reproduce CSVs from scratch, run the matching script from the repo root (requires a lot of time):
 
 ```bash
+./experiments/run_baseline_chunk_topology_sweep.sh
 ./experiments/run_hybrid_ablation.sh
-./experiments/run_baseline_chunk_topology_sweep.sh   
+./experiments/run_fixed_k_chunking_sweep.sh      
+./experiments/run_hybrid_noise_clip_sweep.sh
+./experiments/run_peer_count_mechanism_sweep.sh
+./experiments/run_chunk_variant.sh               
 ```
 
-Override output location with `RESULTS_ROOT=/path/to/out ./experiments/run_hybrid_ablation.sh`.
+Override output location with `RESULTS_ROOT=/path/to/out ./experiments/run_hybrid_ablation.sh` (same pattern for other scripts).
 
 ## Plotting (`plotting/`)
 
@@ -136,6 +140,12 @@ python main.py --dataset mnist --model cnn --topology ring --peers 10 --rounds 3
 
 ```bash
 ./experiments/run_hybrid_ablation.sh
+```
+
+**Fixed-*K* chunking references** (writes to `results/fixed_k_chunking_sweep/<K>_standard_chunking_sweep/er_p_<p>/`; used as reference points in hybrid ablation and noise-sweep plots):
+
+```bash
+./experiments/run_fixed_k_chunking_sweep.sh
 ```
 
 ## Main CLI options

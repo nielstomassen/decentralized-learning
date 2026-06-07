@@ -12,12 +12,12 @@ LOG_FILE="$LOG_DIR/hybrid_noise_clip_sweep_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 ROUNDS=${ROUNDS:-100}
 PEERS=${PEERS:-100}
-SEEDS="${SEEDS:-999}"
-ER_PS="${ER_PS:-0.08}"
+SEEDS="${SEEDS:-4999 555 932 1102 2}"
+ER_PS="${ER_PS:-0.08 0.16}"
 RESULTS_ROOT=${RESULTS_ROOT:-results/hybrid_noise_clip_sweep}
 BATCH_SIZE=${BATCH_SIZE:-32}
 # Sweep values (space-separated). Tune these to find sweet spot.
-NOISE_VALUES="${NOISE_VALUES:-0.3 0.4 0.5 0.6}"
+NOISE_VALUES="${NOISE_VALUES:-0.1 0.2 0.3 0.4 0.5 0.6 0.7}"
 CLIP_VALUES="${CLIP_VALUES:-1.0 1.5 2.0}"
 EXTRA_ARGS=()
 [[ -n "${TIMING:-}" ]] && [[ "${TIMING}" != "0" ]] && EXTRA_ARGS+=(--time-rounds)
@@ -75,4 +75,9 @@ for er_p in $ER_PS; do
 done
 
 echo "=== Done. CSVs in $RESULTS_ROOT/er_p_<p>/ (one file per noise/clip/seed). ==="
-echo "Analyze: bash scripts/plot_noise_sweep_er008_with_standard_k_refs.sh  (or plotting/hybrid_noise_clip_sweep/analyze_hybrid_noise_clip_sweep.py with --results-glob, --out-dir, --ablation-ref-dir, --er-p)"
+echo "Plot per er_p (repeat for each p in ER_PS):"
+echo "  python3 -m plotting.hybrid_noise_clip_sweep.analyze_hybrid_noise_clip_sweep \\"
+echo "    --results-glob '$RESULTS_ROOT/er_p_<p>/*.csv' \\"
+echo "    --out-dir plots/hybrid_noise_clip_sweep/er_p_<p> \\"
+echo "    --ablation-ref-dir results/hybrid_ablation/er_p_<p> \\"
+echo "    --er-p <p> --lambda 0.5 --auc-col max_auc"
